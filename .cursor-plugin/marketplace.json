@@ -12,8 +12,8 @@
       "name": "weegloo",
       "source": "plugins/weegloo",
       "description": "Weegloo MCP (entity CRUD, WebHosting), rules, and skills for Weegloo workflows.",
-      "homepage": "https://github.com/weeglooapi/weegloo-mcp-plugin",
-      "repository": "https://github.com/weeglooapi/weegloo-mcp-plugin",
+      "homepage": "https://github.com/weeglooapi/snow-weegloo-mcp-plugin",
+      "repository": "https://github.com/weeglooapi/snow-weegloo-mcp-plugin",
       "license": "MIT",
       "keywords": ["weegloo", "mcp", "cms", "cda", "cma", "web-hosting", "skills", "rules"]
     }

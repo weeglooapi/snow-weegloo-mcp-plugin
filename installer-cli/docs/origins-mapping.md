@@ -30,18 +30,18 @@
 | 적용 위치 | **인스톨러 측** (install + `--update` 공용 함수) | **콘텐츠 측 엔터프라이즈 브랜치(CI 생성) 기각** — 릴리스마다 N개 브랜치 재생성 운영비 + 백엔드가 브랜치를 알아야 함. 단, 완전 격리 납품 모델에서는 이 방식(origins 파일을 CI에서 적용해 브랜치 생성)을 **이 구현 위에** 얹을 수 있음 — 상호 배타가 아님 |
 | 매핑 단위 | 키는 **서비스명 8개**(cma/cda/acma/acda/upload/auth/console/ai — 전체 origin 키도 정규화 수용), 값은 대상 origin — 치환은 **호스트 문자열 + 문자 경계 검사** | 경로 단위 매핑은 과설계. **호스트 단위 치환의 근거(실측)**: 본문에 scheme 없는 bare 호스트 언급이 52곳(auth 29·cma 17·cda 4·upload 2) — origin 단위로만 치환하면 산문 언급이 프로덕션 호스트로 남아 안내가 뒤섞임. ⚠️ 단 8개 호스트는 상호 비중첩이 **아님**(`acma`⊃`cma`, `acda`⊃`cda` — 구현 중 테스트로 발견) → 단순 replaceAll이면 cma 매핑이 acma를 오염. **앞뒤가 호스트 문자([A-Za-z0-9-])가 아닐 때만 매칭**하는 경계 정규식으로 치환(순서 무관·오답 예시 `cda-weegloo.com`은 dash 경계라 불변) |
 | 기본값 | 매핑 없음 = **현행과 바이트 동일** | breaking 없음이 최우선 |
-| 버전 체크 | **매핑 대상** (`ai.weegloo.com` 통째로) | 초안은 "공용 유지"였으나 사용자 결정으로 전환 — 고객 스택이 `/v1/version?branch=`를 제공. `/mcp`(MCP 서버)와 같은 origin이라 별도 `mcp` 키 없이 origin 매핑 하나로 둘 다 커버(단순화) |
+| 버전 체크 | **매핑 대상** (`ai.sn-weegloo.com` 통째로) | 초안은 "공용 유지"였으나 사용자 결정으로 전환 — 고객 스택이 `/v1/version?branch=`를 제공. `/mcp`(MCP 서버)와 같은 origin이라 별도 `mcp` 키 없이 origin 매핑 하나로 둘 다 커버(단순화) |
 | 약관 게이트 | **origins 매핑이 하나라도 있으면 `weegloo-terms-consent` 룰 자동 제외** | origins 사용 = 사실상 B2B 납품/스테이징뿐(사용자 판단) — weegloo 운영 스택의 약관 게이트가 성립하지 않는 환경. **초안(cma 키 조건부 제외)은 단순화를 위해 기각** — 조건부가 설명 비용만 늘리고, cda-only 스테이징에서 게이트를 잃는 비용은 실질 0(내부 사용자). 링크(`weegloo.com/terms`)는 이 룰에만 존재(3곳)해 룰 제외와 함께 자연 소멸 |
 | docs | **공용 고정** (매핑 제외) | 고객이 docs 미러를 둘 가능성 낮음. 폐쇄망 요구가 실제로 오면 그때 매핑 키 추가(순수 추가) |
 | 콘텐츠 소스 | **공용 레포 단일** — 룰/스킬의 사설 레포(포크) 납품은 **비지원** | 엔터프라이즈도 콘텐츠는 공용, 도메인만 origins 로 교체하는 모델. 덕분에 update 커맨드가 환경 무관하게 최소형으로 유지됨(repo 를 기록에 영속할 필요 없음). `WEEGLOO_REPO` env 는 개발/테스트용 오버라이드일 뿐 납품 경로 아님 |
 | 플래그 네이밍 | **`--origins`** (env `WEEGLOO_ORIGINS`, 기록 키 `origins`) | 초안 `--hosts`는 기존 `--host`(Xcode GUI 호스트)와 한 글자 차이라 오타/혼동 위험 — 사용자 지적으로 리네임. 후보: `--domains`(직관적), `--origins`(기술적으로 정확 — 키가 origin), `--endpoints`(경로 포함 연상이라 부적합) 중 **origins 채택**(사용자 결정) |
-| 브라우저 SDK | **다운로드 경로 공용 고정** (`weegloo-media.com/static/libs/service-login/…`) | 스킬 내 `weegloo-media.com` 4곳 전부 이 경로 → 도메인 통째로 매핑 테이블에서 제외. ⚠️ SDK가 auth base URL을 설정으로 받는지 별도 확인 필요(§8) |
+| 브라우저 SDK | **다운로드 경로 공용 고정** (`weegloo-media.navercorp.com/static/libs/service-login/…`) | 스킬 내 `weegloo-media.navercorp.com` 4곳 전부 이 경로 → 도메인 통째로 매핑 테이블에서 제외. ⚠️ SDK가 auth base URL을 설정으로 받는지 별도 확인 필요(§8) |
 
 ## 3. 매핑 스키마
 
 ```jsonc
 // origins.json — 값은 환경/고객별. 키는 아래 서비스명 8개만 유효(모르는 키 → 에러). 부분 매핑 허용.
-// 키가 전체 origin("https://cma.weegloo.com")으로 와도 서비스명으로 정규화 수용(복붙 관용) —
+// 키가 전체 origin("https://cma.sn-weegloo.com")으로 와도 서비스명으로 정규화 수용(복붙 관용) —
 // 소스 origin은 고정 8개라 전체 URL 키는 중복 타이핑일 뿐이라 짧은 키를 표준으로 채택(사용자 결정).
 {
   "cma":     "https://cma.acme.com",
@@ -55,7 +55,7 @@
 }
 ```
 
-**공용 고정(매핑 불가)**: `docs.weegloo.com`, `weegloo-media.com`(SDK 번들),
+**공용 고정(매핑 불가)**: `docs.sn-weegloo.com`, `weegloo-media.navercorp.com`(SDK 번들),
 `weegloo.com/terms`(룰 제외로 소멸), 외부 스펙/콘솔(RFC·npm·provider 콘솔),
 예시 URL(`api.llm.com` 등), 오답 예시 `cda-weegloo.com`(절대 치환 금지 — 문자열이 달라 자연 안전).
 
@@ -72,7 +72,7 @@
    `applyOriginMapping(content, hosts)` (호스트 문자열 단위 replaceAll — §2 매핑 단위 참조) —
    install(`index.js`)과 `--update`(`update.js`) **공용 함수 1개**.
 2. **매니페스트 MCP URL**: `resources.mcp.weeglooUrl` / `uploadApiUrl` 에 동일 매핑
-   (`ai.weegloo.com/mcp`, `upload.weegloo.com/v1` 이 호스트 매핑으로 커버됨) →
+   (`ai.sn-weegloo.com/mcp`, `upload.sn-weegloo.com/v1` 이 호스트 매핑으로 커버됨) →
    에이전트별 MCP 설정 파일에 매핑된 값이 쓰임 (Claude 예: global `~/.claude.json`,
    project `<cwd>/.mcp.json` 의 `weegloo` 서버 `url` + `weegloo-upload` 의 `UPLOAD_API_URL`).
    MCP 설정은 **설치 시에만** 쓰이므로 환경 전환 시의 함정은 §5 참조.
@@ -140,7 +140,7 @@
 - [ ] provider 콘솔(구글 등)에 고객 auth 도메인의 redirect URI 등록
 - [ ] `version?branch=` ↔ 매니페스트 `version` 동일 소스 확인
 - [ ] 브라우저 SDK(`weegloo-service-user`)가 **auth base URL 을 설정으로 받는지** 확인 —
-      내부에 `auth.weegloo.com` 하드코딩이면 공용 SDK가 고객 auth 와 통신 불가 (SDK 측 선행 수정)
+      내부에 `auth.sn-weegloo.com` 하드코딩이면 공용 SDK가 고객 auth 와 통신 불가 (SDK 측 선행 수정)
 - [ ] terms-consent 제외에 따른 약관 처리(계약/자체 게시) 확인
 
 ## 9. 작업 분할

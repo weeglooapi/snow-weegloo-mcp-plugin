@@ -45,38 +45,38 @@ test('normalizeOrigins: trailing slashes trimmed; full-origin keys accepted and 
   assert.deepEqual(normalizeOrigins({ cma: 'https://cma.acme.com/' }), { cma: 'https://cma.acme.com' });
   // 옛 문서/복붙 관용: 전체 origin 키도 서비스명으로 정규화 수용
   assert.deepEqual(
-    normalizeOrigins({ 'https://cma.weegloo.com/': 'https://cma.acme.com' }),
+    normalizeOrigins({ 'https://cma.sn-weegloo.com/': 'https://cma.acme.com' }),
     { cma: 'https://cma.acme.com' }
   );
 });
 
 test('normalizeOrigins: a value containing any weegloo source host is rejected (circular/overlap)', () => {
   assert.throws(
-    () => normalizeOrigins({ cma: 'https://cda.weegloo.com' }),
+    () => normalizeOrigins({ cma: 'https://cda.sn-weegloo.com' }),
     /circular\/overlapping/
   );
   assert.throws(
-    () => normalizeOrigins({ cma: 'https://cma.weegloo.com.acme.com' }),
+    () => normalizeOrigins({ cma: 'https://cma.sn-weegloo.com.acme.com' }),
     /circular\/overlapping/
   );
 });
 
 test('normalizeOrigins: a host-boundary prefix on the same domain is allowed (dev-* environment split)', () => {
   // The collision check uses the same boundary rule as the substitution, so `dev-cma…` is not
-  // "containing" `cma.weegloo.com` — a plain includes() rejected the whole dev stack.
+  // "containing" `cma.sn-weegloo.com` — a plain includes() rejected the whole dev stack.
   const dev = Object.fromEntries(
     ['cma', 'cda', 'acma', 'acda', 'upload', 'auth', 'console', 'ai']
       .map((s) => [s, `https://dev-${s}.weegloo.com`])
   );
   assert.deepEqual(normalizeOrigins(dev), dev);
   // …while an exact source host (a true no-op/circular mapping) stays rejected.
-  assert.throws(() => normalizeOrigins({ cma: 'https://cma.weegloo.com' }), /circular\/overlapping/);
+  assert.throws(() => normalizeOrigins({ cma: 'https://cma.sn-weegloo.com' }), /circular\/overlapping/);
 });
 
 test('applyOriginMapping: dev-* same-domain mapping substitutes once, order-independently', () => {
   const dev = { cma: 'https://dev-cma.weegloo.com', acma: 'https://dev-acma.weegloo.com' };
   const out = applyOriginMapping(
-    'https://cma.weegloo.com/v1 https://acma.weegloo.com/v1 bare cma.weegloo.com https://cda-weegloo.com',
+    'https://cma.sn-weegloo.com/v1 https://acma.sn-weegloo.com/v1 bare cma.sn-weegloo.com https://cda-weegloo.com',
     dev
   );
   assert.ok(out.includes('https://dev-cma.weegloo.com/v1'));
@@ -105,26 +105,26 @@ test('loadOrigins: inline JSON and file path both work; bad file/JSON produce fr
 
 test('applyOriginMapping: rewrites scheme URLs (path preserved) AND bare prose mentions', () => {
   const input = [
-    'Base URL: `https://cma.weegloo.com`',
-    'GET https://cma.weegloo.com/v1/spaces/{spaceId}/contents?limit=10',
-    'the `cma.weegloo.com` host handles management calls', // bare mention (실측 52곳 케이스)
+    'Base URL: `https://cma.sn-weegloo.com`',
+    'GET https://cma.sn-weegloo.com/v1/spaces/{spaceId}/contents?limit=10',
+    'the `cma.sn-weegloo.com` host handles management calls', // bare mention (실측 52곳 케이스)
   ].join('\n');
   const out = applyOriginMapping(input, ACME);
-  assert.ok(!out.includes('cma.weegloo.com'));
+  assert.ok(!out.includes('cma.sn-weegloo.com'));
   assert.ok(out.includes('https://cma.acme.com/v1/spaces/{spaceId}/contents?limit=10'), 'path/query preserved');
   assert.ok(out.includes('the `cma.acme.com` host'));
 });
 
 test('applyOriginMapping: the deliberate wrong-example host and unmapped hosts stay untouched', () => {
-  const input = 'Wrong: `https://cda-weegloo.com` — docs at https://docs.weegloo.com/llms.txt, cda at https://cda.weegloo.com';
+  const input = 'Wrong: `https://cda-weegloo.com` — docs at https://docs.sn-weegloo.com/llms.txt, cda at https://cda.sn-weegloo.com';
   const out = applyOriginMapping(input, ACME); // cma만 매핑
   assert.ok(out.includes('https://cda-weegloo.com'), 'wrong-example untouched (dash ≠ dot)');
-  assert.ok(out.includes('https://docs.weegloo.com/llms.txt'), 'public-fixed host untouched');
-  assert.ok(out.includes('https://cda.weegloo.com'), 'unmapped origin untouched (partial mapping)');
+  assert.ok(out.includes('https://docs.sn-weegloo.com/llms.txt'), 'public-fixed host untouched');
+  assert.ok(out.includes('https://cda.sn-weegloo.com'), 'unmapped origin untouched (partial mapping)');
 });
 
 test('applyOriginMapping: null mapping is a byte-identical passthrough', () => {
-  const input = 'https://cma.weegloo.com and cma.weegloo.com';
+  const input = 'https://cma.sn-weegloo.com and cma.sn-weegloo.com';
   assert.equal(applyOriginMapping(input, null), input);
 });
 
@@ -132,11 +132,11 @@ test('applyOriginMapping: null mapping is a byte-identical passthrough', () => {
 
 const RESOURCES = {
   version: 'v9',
-  mcp: { weeglooUrl: 'https://ai.weegloo.com/mcp', uploadApiUrl: 'https://upload.weegloo.com/v1' },
-  skills: [{ id: 'weegloo-a', files: { 'SKILL.md': 'call https://cma.weegloo.com/v1/x' } }],
+  mcp: { weeglooUrl: 'https://ai.sn-weegloo.com/mcp', uploadApiUrl: 'https://upload.sn-weegloo.com/v1' },
+  skills: [{ id: 'weegloo-a', files: { 'SKILL.md': 'call https://cma.sn-weegloo.com/v1/x' } }],
   rules: [
-    { id: 'weegloo-global-rules', content: 'use cma.weegloo.com for management' },
-    { id: TERMS_CONSENT_RULE_ID, content: 'terms at https://cma.weegloo.com/v1/policy/terms' },
+    { id: 'weegloo-global-rules', content: 'use cma.sn-weegloo.com for management' },
+    { id: TERMS_CONSENT_RULE_ID, content: 'terms at https://cma.sn-weegloo.com/v1/policy/terms' },
   ],
 };
 
@@ -148,8 +148,8 @@ test('applyOriginsToResources: skills + rules + MCP URLs all rewritten; original
   assert.equal(out.skills[0].files['SKILL.md'], 'call https://cma.acme.com/v1/x');
   assert.equal(out.rules[0].content, 'use cma.acme.com for management');
   // 원본 불변 (매번 원본에서 새로 치환 — 이중 치환 없음의 전제)
-  assert.equal(RESOURCES.skills[0].files['SKILL.md'], 'call https://cma.weegloo.com/v1/x');
-  assert.equal(RESOURCES.mcp.weeglooUrl, 'https://ai.weegloo.com/mcp');
+  assert.equal(RESOURCES.skills[0].files['SKILL.md'], 'call https://cma.sn-weegloo.com/v1/x');
+  assert.equal(RESOURCES.mcp.weeglooUrl, 'https://ai.sn-weegloo.com/mcp');
 });
 
 test('applyTermsExclusion: ANY origins mapping → terms-consent leaves the catalog; no mapping → untouched', () => {
@@ -168,7 +168,7 @@ test('applySelfUpdateTemplate: the baked version-check URL goes through the orig
   const origins = { ai: 'https://ai.acme.com' };
   const [out] = applySelfUpdateTemplate([rule], { agent: 'claude', ref: 'latest', scope: 'global', origins });
   assert.ok(out.content.includes('https://ai.acme.com/v1/version?branch=latest'));
-  assert.ok(!out.content.includes('ai.weegloo.com'));
+  assert.ok(!out.content.includes('ai.sn-weegloo.com'));
   // 매핑 없음 → 프로덕션 URL 그대로 (회귀)
   const [plain] = applySelfUpdateTemplate([rule], { agent: 'claude', ref: 'latest', scope: 'global' });
   assert.ok(plain.content.includes(`${VERSION_URL}?branch=latest`));
@@ -192,11 +192,11 @@ test('MAPPABLE_SERVICES: exactly the 8 decided services', () => {
 // acma ⊃ cma, acda ⊃ cda — 8개 호스트는 상호 비중첩이 아니어서 단순 replaceAll이면
 // cma 매핑이 acma까지 오염시킨다. 경계 검사(hostPattern)가 그걸 막는지가 이 테스트.
 test('applyOriginMapping: boundary guard — mapping cma must NOT bleed into acma (and cda into acda)', () => {
-  const input = 'acma.weegloo.com and cma.weegloo.com; https://acda.weegloo.com/v1 vs https://cda.weegloo.com/v1';
+  const input = 'acma.sn-weegloo.com and cma.sn-weegloo.com; https://acda.sn-weegloo.com/v1 vs https://cda.sn-weegloo.com/v1';
   const cmaOnly = applyOriginMapping(input, { cma: 'https://cma.acme.com' });
   assert.equal(
     cmaOnly,
-    'acma.weegloo.com and cma.acme.com; https://acda.weegloo.com/v1 vs https://cda.weegloo.com/v1'
+    'acma.sn-weegloo.com and cma.acme.com; https://acda.sn-weegloo.com/v1 vs https://cda.sn-weegloo.com/v1'
   );
   // 넷 다 매핑 — 순서 무관하게 각자 정확히
   const all = applyOriginMapping(input, {
@@ -212,8 +212,8 @@ test('applyOriginMapping: boundary guard — mapping cma must NOT bleed into acm
 });
 
 test('applyOriginMapping: sentence-final dot and backticks still map; suffix-alike tokens do not', () => {
-  const out = applyOriginMapping('see `cma.weegloo.com`, then cma.weegloo.com. Also cma.weegloo.company stays.', {
+  const out = applyOriginMapping('see `cma.sn-weegloo.com`, then cma.sn-weegloo.com. Also cma.sn-weegloo.company stays.', {
     cma: 'https://cma.acme.com',
   });
-  assert.equal(out, 'see `cma.acme.com`, then cma.acme.com. Also cma.weegloo.company stays.');
+  assert.equal(out, 'see `cma.acme.com`, then cma.acme.com. Also cma.sn-weegloo.company stays.');
 });

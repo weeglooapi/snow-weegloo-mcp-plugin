@@ -118,9 +118,9 @@ whenever one of these fits. These are the situations an AI agent should map to S
 ## Authoring vs execution (which plane)
 
 - **Authoring is CMA-only** — create/read/update/delete a Script with a **Weegloo User** Bearer on
-  `https://cma.weegloo.com`. There is **no ACMA authoring**; Service Users do not create Scripts.
+  `https://cma.sn-weegloo.com`. There is **no ACMA authoring**; Service Users do not create Scripts.
 - **Execution + polling run on CMA *or* ACMA** — a Service User (ServiceLogin Bearer) executes a
-  Script on `https://acma.weegloo.com`; a Weegloo User executes on CMA. Both need the **Script
+  Script on `https://acma.sn-weegloo.com`; a Weegloo User executes on CMA. Both need the **Script
   `Execute`** permission (below).
 
 ### Endpoints

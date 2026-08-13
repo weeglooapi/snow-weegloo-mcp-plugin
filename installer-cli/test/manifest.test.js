@@ -148,7 +148,7 @@ test('loadResources returns null for a malformed entry (strict — no silent dro
   stubManifest({
     schemaVersion: 1,
     repoContentPrefix: 'plugins/weegloo',
-    mcp: { weeglooUrl: 'https://ai.weegloo.com/mcp', uploadApiUrl: 'https://upload.weegloo.com/v1' },
+    mcp: { weeglooUrl: 'https://ai.sn-weegloo.com/mcp', uploadApiUrl: 'https://upload.sn-weegloo.com/v1' },
     skills: [
       { id: 'good', files: { 'SKILL.md': 'x' } },
       { id: 'bad', files: { 'SKILL.md': 123 } }, // non-string content → reject whole manifest

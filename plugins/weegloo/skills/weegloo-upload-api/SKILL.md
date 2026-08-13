@@ -1,6 +1,6 @@
 ---
 name: weegloo-upload-api
-description: How a product's own code uploads a file via the Weegloo Upload REST API and then creates a Media (or WebHosting) from the returned Upload reference. Covers the two-step pattern (POST to upload.weegloo.com → Upload.sys.id → CMA/ACMA Media create or WebHosting create), multipart vs binary endpoints, Bearer auth + vendor JSON, the temporary Upload resource (sys.expiresAt), CMA-vs-ACMA plane selection, and the hard line between this Upload API (for the user's product/app code) and the `weegloo-upload` MCP server (for the agent/LLM uploading local files). Use when implementing a file-upload feature in an app, or any "upload a file and attach it as Media/WebHosting" flow in product code.
+description: How a product's own code uploads a file via the Weegloo Upload REST API and then creates a Media (or WebHosting) from the returned Upload reference. Covers the two-step pattern (POST to upload.sn-weegloo.com → Upload.sys.id → CMA/ACMA Media create or WebHosting create), multipart vs binary endpoints, Bearer auth + vendor JSON, the temporary Upload resource (sys.expiresAt), CMA-vs-ACMA plane selection, and the hard line between this Upload API (for the user's product/app code) and the `weegloo-upload` MCP server (for the agent/LLM uploading local files). Use when implementing a file-upload feature in an app, or any "upload a file and attach it as Media/WebHosting" flow in product code.
 ---
 
 # Weegloo — Upload API (product code) → Media / WebHosting
@@ -21,7 +21,7 @@ These are two completely different things. Pick by **who is uploading and why**.
 |---|---|---|
 | Who calls it | The **product's own code** (browser `fetch` / server) | The **agent / LLM**, over MCP |
 | Purpose | Implement a **file-upload feature** for end-users/admins in the app | The agent uploads a **local file** during development / content authoring |
-| How | `POST https://upload.weegloo.com/v1/.../uploads[...]` | MCP tool `CreateUpload` (args: `spaceId`, absolute `filePath`) → then `cma_CreateMedia` |
+| How | `POST https://upload.sn-weegloo.com/v1/.../uploads[...]` | MCP tool `CreateUpload` (args: `spaceId`, absolute `filePath`) → then `cma_CreateMedia` |
 | The OpenAPI says | "**Do not use this on MCP protocol**" for the REST upload endpoints | This is the MCP path; not for the product's runtime upload feature |
 
 **Rules:**
@@ -34,7 +34,7 @@ These are two completely different things. Pick by **who is uploading and why**.
 
 ## Step 1 — Upload the bytes (Upload API)
 
-`Base URL: https://upload.weegloo.com/v1` · `Authorization: Bearer <token>` · omit `Accept` (vendor
+`Base URL: https://upload.sn-weegloo.com/v1` · `Authorization: Bearer <token>` · omit `Accept` (vendor
 JSON; see `weegloo-api-endpoints`).
 
 Endpoints (Space scope; `organizations/{organizationId}` variants also exist):
@@ -90,7 +90,7 @@ conservative free-tier floor; paid tiers are larger.
   avoid a long upload that dies mid-stream. Since the exact cap is plan-specific, gate on a
   configured limit (or the free-tier floor) rather than guessing.
 - Exact per-plan limits are plan-defined and may change — confirm via the docs / pricing page
-  (`https://docs.weegloo.com/pricing/pricing/`), don't assume.
+  (`https://docs.sn-weegloo.com/pricing/pricing/`), don't assume.
 - The plan **tier** is readable from the **Organization** (`sys.plan.sys.id`, e.g. `free`) — a Space
   has no plan field, so go Space → its Organization. But the tier id does **not** carry the numeric
   size cap, and per-Space overrides can diverge from the tier's nominal limit, so use it only as a
@@ -99,8 +99,8 @@ conservative free-tier floor; paid tiers are larger.
 
 ## Step 2a — Create a Media from the Upload
 
-`POST https://cma.weegloo.com/v1/spaces/{spaceId}/medias` (Weegloo User) **or**
-`POST https://acma.weegloo.com/v1/spaces/{spaceId}/medias` (Service User). Same body shape.
+`POST https://cma.sn-weegloo.com/v1/spaces/{spaceId}/medias` (Weegloo User) **or**
+`POST https://acma.sn-weegloo.com/v1/spaces/{spaceId}/medias` (Service User). Same body shape.
 
 The uploaded asset is attached **per locale** under `fields.file.{locale}` via an **`upload` Refer**
 to the `Upload.sys.id` from Step 1:
@@ -134,7 +134,7 @@ to the `Upload.sys.id` from Step 1:
 
 ## Step 2b — Create a WebHosting from the Upload
 
-`POST https://cma.weegloo.com/v1/spaces/{spaceId}/web-hostings` (Weegloo User). The ZIP/tar.gz
+`POST https://cma.sn-weegloo.com/v1/spaces/{spaceId}/web-hostings` (Weegloo User). The ZIP/tar.gz
 upload (with `index.html` at root, relative asset paths) is referenced the same way:
 
 ```jsonc
@@ -155,7 +155,7 @@ Build-time / packaging constraints (max 100 files, static-only): see `weegloo-we
   Never route Service-User media through CMA. See `weegloo-service-architecture` /
   `weegloo-service-login`.
 
-The Upload step is the **one shared surface** — both Bearers are accepted at `upload.weegloo.com`;
+The Upload step is the **one shared surface** — both Bearers are accepted at `upload.sn-weegloo.com`;
 only the follow-up Media-create plane differs by identity.
 
 ## Checklist

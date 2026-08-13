@@ -1,13 +1,13 @@
 ---
 name: weegloo-service-login-google
-description: Provider-specific setup for Weegloo ServiceLogin with **Google** OAuth 2.0 — the exact Google Cloud Console steps to create an OAuth client and obtain the `clientId` / `clientSecret`, the Google redirect URI to register (`https://auth.weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/google`), the OAuth consent screen / Test users gotcha, and the walkthrough to hand the user when asking for the blocking credentials. Use ONLY when the chosen provider is Google. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for another provider (GitHub, Facebook, GitLab, LINE, Kakao, or Naver).
+description: Provider-specific setup for Weegloo ServiceLogin with **Google** OAuth 2.0 — the exact Google Cloud Console steps to create an OAuth client and obtain the `clientId` / `clientSecret`, the Google redirect URI to register (`https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/google`), the OAuth consent screen / Test users gotcha, and the walkthrough to hand the user when asking for the blocking credentials. Use ONLY when the chosen provider is Google. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for another provider (GitHub, Facebook, GitLab, LINE, Kakao, or Naver).
 ---
 
 # Weegloo ServiceLogin — Google provider setup
 
 This is the **Google instance** of the provider-agnostic ServiceLogin setup. It covers only the
 **Google Cloud Console** side: creating the OAuth client and producing the `clientId` / `clientSecret`
-that `ServiceLogin` needs. Everything else (the `auth.weegloo.com` wire protocol, the SDK, `callbackUrl`,
+that `ServiceLogin` needs. Everything else (the `auth.sn-weegloo.com` wire protocol, the SDK, `callbackUrl`,
 `exchangeToken`, ACMA/ACDA scope) is provider-agnostic and lives in the spine.
 
 > **Prerequisite gate.** Use this **only after** you have a ServiceLogin design from
@@ -24,13 +24,13 @@ In the Google Cloud Console OAuth client, the **Authorized redirect URI** is, wi
 substituted:
 
 ```
-https://auth.weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/google
+https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/google
 ```
 
 - The `/code/` segment is required — it is the **Google → Weegloo** callback, **not** the browser entry
   URL (`…/login/oauth2/google`). Putting `/code/` in the entry URL, or the entry URL in this field,
   breaks sign-in (spine pitfall **A**).
-- It depends only on `auth.weegloo.com` + your `spaceId` + `google`, so it is **fully known now** —
+- It depends only on `auth.sn-weegloo.com` + your `spaceId` + `google`, so it is **fully known now** —
   register it before the app is deployed (spine pitfall **G**). `callbackUrl` is the deploy-dependent
   one; this is not.
 
@@ -51,13 +51,13 @@ this step-by-step walkthrough, with the real `{spaceId}` already filled into the
    users**, otherwise sign-in is blocked.
 3. **+ Create Credentials → OAuth client ID**, and for **Application type select `Web application`** —
    give it a name. **Choose `Web application` even when your product is an Android / iOS app**; do
-   *not* pick the "Android" or "iOS" type. Weegloo's redirect URI is `https://auth.weegloo.com/…` (a
+   *not* pick the "Android" or "iOS" type. Weegloo's redirect URI is `https://auth.sn-weegloo.com/…` (a
    web URL), so from Google's side the OAuth client is always a web app — a native app receives its
    token via the `https` WebHosting deep-link bridge, not a Google native client (see
    **`weegloo-service-login-sdk`** → *Native apps (Android / iOS)*).
 4. Under **Authorized redirect URIs**, **Add URI** and paste **exactly** the redirect URI above (with
    the real `{spaceId}`). **No "Authorized JavaScript origins" are needed** — the browser navigates to
-   `auth.weegloo.com`, never to Google directly.
+   `auth.sn-weegloo.com`, never to Google directly.
 5. Click **Create**, then copy the **Client ID** and **Client Secret** from the dialog and send both
    back.
 

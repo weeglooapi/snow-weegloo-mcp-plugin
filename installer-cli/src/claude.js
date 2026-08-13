@@ -198,7 +198,7 @@ export async function installClaude({
     '     ' +
     chalk.cyan('claude plugin marketplace add') +
     ' ' +
-    chalk.white('https://github.com/weeglooapi/weegloo-mcp-plugin')
+    chalk.white('https://github.com/weeglooapi/snow-weegloo-mcp-plugin')
   );
   console.log(
     '     ' + chalk.cyan('claude plugin install') + ' ' + chalk.white('weegloo@weegloo-plugins')
@@ -206,11 +206,11 @@ export async function installClaude({
   console.log();
   console.log(chalk.dim('  Or MCP-only from a local clone (plugin root):'));
   console.log();
-  console.log('     ' + chalk.cyan('git clone https://github.com/weeglooapi/weegloo-mcp-plugin.git'));
+  console.log('     ' + chalk.cyan('git clone https://github.com/weeglooapi/snow-weegloo-mcp-plugin.git'));
   console.log(
     '     ' +
     chalk.cyan('claude mcp add-from-claude-plugin') +
     ' ' +
-    chalk.white('./weegloo-mcp-plugin/plugins/weegloo')
+    chalk.white('./snow-weegloo-mcp-plugin/plugins/weegloo')
   );
 }

@@ -8,7 +8,7 @@ const pkg = require('../package.json');
 
 // Default plugin repo; override with WEEGLOO_REPO=owner/name to point the installer at a
 // fork / mirror / staging repo (used for end-to-end testing). All URLs below derive from it.
-export const REPO = process.env.WEEGLOO_REPO || 'weeglooapi/weegloo-mcp-plugin';
+export const REPO = process.env.WEEGLOO_REPO || 'weeglooapi/snow-weegloo-mcp-plugin';
 const RAW_BASE = `https://raw.githubusercontent.com/${REPO}`;
 
 /**
@@ -17,7 +17,7 @@ const RAW_BASE = `https://raw.githubusercontent.com/${REPO}`;
  * Public, unauthenticated, plain JSON: `{ "version": "<string>" }`. A missing branch returns an
  * HTTP 500 (NotFound detail), not a 404. Overridable via WEEGLOO_VERSION_URL for staging / tests.
  */
-export const VERSION_URL = process.env.WEEGLOO_VERSION_URL || 'https://ai.weegloo.com/v1/version';
+export const VERSION_URL = process.env.WEEGLOO_VERSION_URL || 'https://ai.sn-weegloo.com/v1/version';
 
 /**
  * Branch list source: git smart-HTTP ref advertisement. This is NOT

@@ -1,6 +1,6 @@
 {
   "name": "weegloo",
-  "version": "1.7.0",
+  "version": "0.0.0",
   "description": "CLI to set up the Weegloo MCP plugin for Cursor, Claude Code, Codex, Antigravity, and Android Studio (interactive or non-interactive)",
   "type": "module",
   "bin": {
@@ -35,15 +35,18 @@
     "email": "support@weegloo.com"
   },
   "license": "MIT",
-  "homepage": "https://github.com/weeglooapi/weegloo-mcp-plugin",
+  "homepage": "https://github.com/weeglooapi/snow-weegloo-mcp-plugin",
   "repository": {
     "type": "git",
-    "url": "https://github.com/weeglooapi/weegloo-mcp-plugin.git",
+    "url": "https://github.com/weeglooapi/snow-weegloo-mcp-plugin.git",
     "directory": "installer-cli"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.10.1",
     "chalk": "^5.6.2",
     "ora": "^8.2.0"
+  },
+  "publishConfig": {
+    "registry": "https://artifactory.navercorp.com/artifactory/api/npm/npm-local/"
   }
 }

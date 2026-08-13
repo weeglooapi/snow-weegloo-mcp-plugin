@@ -1,5 +1,6 @@
 import { writeFileSync, mkdirSync, existsSync, rmSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { NPM_REGISTRY } from './cli.js';
 
 /**
  * A syntactically valid skill/rule id — the token that names a skill directory or a
@@ -139,6 +140,11 @@ export function listWeeglooRuleMarkers(contextFilePath) {
  * it through `cmd /c` runs the shim via the command interpreter, and `npx.cmd`
  * locates node.exe next to itself, so no PATH injection is needed there.
  *
+ * `--registry` pins the internal registry and MUST sit before the package name, because
+ * npx forwards everything after it to the server process. A package of the same name
+ * exists on the public registry (at a HIGHER version), so omitting the flag would
+ * silently launch the community build against our internal upload endpoint.
+ *
  * @param {{ injectPath?: boolean, execPath?: string, platform?: NodeJS.Platform }} [opts] injectable for tests
  * @returns {{ command: string, args: string[], env: Record<string, string> }}
  */
@@ -147,8 +153,9 @@ export function uploadServerCommand({
   execPath = process.execPath,
   platform = process.platform,
 } = {}) {
+  const registryFlag = `--registry=${NPM_REGISTRY}`;
   if (platform === 'win32') {
-    return { command: 'cmd', args: ['/c', 'npx', '-y', 'weegloo-upload'], env: {} };
+    return { command: 'cmd', args: ['/c', 'npx', '-y', registryFlag, 'weegloo-upload'], env: {} };
   }
 
   const env = {};
@@ -156,5 +163,5 @@ export function uploadServerCommand({
     const binDir = path.dirname(execPath);
     env.PATH = `${binDir}:/usr/bin:/bin`;
   }
-  return { command: 'npx', args: ['-y', 'weegloo-upload'], env };
+  return { command: 'npx', args: ['-y', registryFlag, 'weegloo-upload'], env };
 }

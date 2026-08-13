@@ -34,9 +34,9 @@ It is **wrong** to use Weegloo User login for end-users of a product (paid membe
 
 A Weegloo User Bearer Token (PAT or one obtained via the console FE login popup) is valid against:
 
-- **CMA** (`https://cma.weegloo.com`) — full read / create / update / delete / publish on resources the user's `SpaceRole` permits.
-- **Upload** (`https://upload.weegloo.com`) — file uploads, normally followed by a CMA call to attach the resulting Media.
-- **CDA** (`https://cda.weegloo.com`) — reads of published resources as that user. In **production**, public CDA reads should still use a least-privilege **`DeliveryAccessToken`** (**`weegloo-delivery-access-token`** skill) so the client is least-privileged; the Weegloo User token is broader than the public site needs.
+- **CMA** (`https://cma.sn-weegloo.com`) — full read / create / update / delete / publish on resources the user's `SpaceRole` permits.
+- **Upload** (`https://upload.sn-weegloo.com`) — file uploads, normally followed by a CMA call to attach the resulting Media.
+- **CDA** (`https://cda.sn-weegloo.com`) — reads of published resources as that user. In **production**, public CDA reads should still use a least-privilege **`DeliveryAccessToken`** (**`weegloo-delivery-access-token`** skill) so the client is least-privileged; the Weegloo User token is broader than the public site needs.
 
 It is **not** the right token for **ACMA** or **ACDA** — those require a **Service User** Bearer Token issued by `ServiceLogin`. See **`weegloo-api-endpoints`** for base URLs and the vendor JSON media type, and **`weegloo-service-login`** for the contrasting identity model.
 
@@ -75,7 +75,7 @@ Listen for **`postMessage`** from the **Weegloo console FE origin** only.
 
 ```javascript
 window.addEventListener("message", (event) => {
-  if (event.origin !== "https://console.weegloo.com") return
+  if (event.origin !== "https://console.sn-weegloo.com") return
   console.log("Token received:", event.data)
   // Handle token — see section 3
 })
@@ -93,7 +93,7 @@ Open the console **login** URL with the **current site origin** so the console c
 
 ```javascript
 const popup = window.open(
-  "https://console.weegloo.com/login?origin=" +
+  "https://console.sn-weegloo.com/login?origin=" +
     encodeURIComponent(location.origin),
   "weegloo-login",
   "width=500,height=600"

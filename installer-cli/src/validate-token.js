@@ -34,13 +34,13 @@ const REQUEST_TIMEOUT_MS = 15000;
  */
 export function cmaMeUrl(mcp, origins = null) {
   if (origins) {
-    return origins.cma ? `${origins.cma}/v1/me` : 'https://cma.weegloo.com/v1/me';
+    return origins.cma ? `${origins.cma}/v1/me` : 'https://cma.sn-weegloo.com/v1/me';
   }
   const uploadApiUrl = mcp?.uploadApiUrl;
   if (typeof uploadApiUrl === 'string' && uploadApiUrl.includes('upload.')) {
     return `${uploadApiUrl.replace('upload.', 'cma.')}/me`;
   }
-  return 'https://cma.weegloo.com/v1/me';
+  return 'https://cma.sn-weegloo.com/v1/me';
 }
 
 /**

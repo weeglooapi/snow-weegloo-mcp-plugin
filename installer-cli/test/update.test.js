@@ -827,12 +827,12 @@ const ACME_ORIGINS = { cma: 'https://cma.acme.com', ai: 'https://ai.acme.com' };
 const ORIGINS_MANIFEST = {
   version: 'v2',
   skills: [
-    { id: 'weegloo-a', files: { 'SKILL.md': 'call https://cma.weegloo.com/v1/x and bare cma.weegloo.com' } },
+    { id: 'weegloo-a', files: { 'SKILL.md': 'call https://cma.sn-weegloo.com/v1/x and bare cma.sn-weegloo.com' } },
   ],
   rules: [
     { id: 'weegloo-version', content: 'GET {{WEEGLOO_VERSION_URL}} stamp {{WEEGLOO_STAMP_PATH}} run {{WEEGLOO_UPDATE_COMMAND}} every {{WEEGLOO_CHECK_INTERVAL_HOURS}}h' },
-    { id: 'weegloo-terms-consent', content: 'terms at https://cma.weegloo.com/v1/policy/terms' },
-    { id: 'weegloo-global-rules', content: 'use cma.weegloo.com for management' },
+    { id: 'weegloo-terms-consent', content: 'terms at https://cma.sn-weegloo.com/v1/policy/terms' },
+    { id: 'weegloo-global-rules', content: 'use cma.sn-weegloo.com for management' },
   ],
 };
 

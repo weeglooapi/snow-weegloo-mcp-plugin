@@ -28,15 +28,15 @@ Choose the installation method for your IDE:
 This repository is a [plugin marketplace](https://code.claude.com/docs/ko/plugin-marketplaces): add the marketplace, then install the `weegloo` plugin (MCP + skills ship inside `plugins/weegloo/`).
 
 ```bash
-claude plugin marketplace add https://github.com/weeglooapi/weegloo-mcp-plugin
+claude plugin marketplace add https://github.com/weeglooapi/snow-weegloo-mcp-plugin
 claude plugin install weegloo@weegloo-plugins
 ```
 
 For MCP only from a local clone, point at the plugin root (not the repo root):
 
 ```bash
-git clone https://github.com/weeglooapi/weegloo-mcp-plugin.git
-claude mcp add-from-claude-plugin ./weegloo-mcp-plugin/plugins/weegloo
+git clone https://github.com/weeglooapi/snow-weegloo-mcp-plugin.git
+claude mcp add-from-claude-plugin ./snow-weegloo-mcp-plugin/plugins/weegloo
 ```
 
 The Weegloo MCP server will be automatically configured when the plugin loads.
@@ -48,13 +48,13 @@ The plugin’s MCP configuration lives at `plugins/weegloo/.mcp.json` (repo root
   "mcpServers": {
     "weegloo": {
       "type": "http",
-      "url": "https://ai.weegloo.com/mcp"
+      "url": "https://ai.sn-weegloo.com/mcp"
     },
     "weegloo-upload": {
       "command": "npx",
-      "args": ["-y", "weegloo-upload"],
+      "args": ["-y", "--registry=https://artifactory.navercorp.com/artifactory/api/npm/npm-local/", "weegloo-upload"],
       "env": {
-        "UPLOAD_API_URL": "https://upload.weegloo.com/v1",
+        "UPLOAD_API_URL": "https://upload.sn-weegloo.com/v1",
         "AUTH_BEARER_TOKEN": "${PERSONAL_ACCESS_TOKEN}"
       }
     }
@@ -66,7 +66,7 @@ After completing the plugin setup, you must replace the `AUTH_BEARER_TOKEN` envi
 
 ### Cursor
 
-**Cursor plugin (rules, skills, MCP):** the installable unit is `plugins/weegloo/`, per [Cursor Plugins](https://cursor.com/docs/plugins). This repo includes `.cursor-plugin/marketplace.json` at the root for team marketplaces or multi-plugin layouts. To try the plugin locally before publishing, symlink the bundle as [documented](https://cursor.com/docs/plugins#test-plugins-locally) (example: `weegloo` → `…/weegloo-mcp-plugin/plugins/weegloo`), then reload the window.
+**Cursor plugin (rules, skills, MCP):** the installable unit is `plugins/weegloo/`, per [Cursor Plugins](https://cursor.com/docs/plugins). This repo includes `.cursor-plugin/marketplace.json` at the root for team marketplaces or multi-plugin layouts. To try the plugin locally before publishing, symlink the bundle as [documented](https://cursor.com/docs/plugins#test-plugins-locally) (example: `weegloo` → `…/snow-weegloo-mcp-plugin/plugins/weegloo`), then reload the window.
 
 **Manual MCP only:** follow these steps if you want MCP in settings without installing the plugin bundle:
 
@@ -87,13 +87,13 @@ Add the following configuration to connect to the remote Weegloo MCP server:
   "mcpServers": {
     "weegloo": {
       "type": "http",
-      "url": "https://ai.weegloo.com/mcp"
+      "url": "https://ai.sn-weegloo.com/mcp"
     },
     "weegloo-upload": {
       "command": "npx",
-      "args": ["-y", "weegloo-upload"],
+      "args": ["-y", "--registry=https://artifactory.navercorp.com/artifactory/api/npm/npm-local/", "weegloo-upload"],
       "env": {
-        "UPLOAD_API_URL": "https://upload.weegloo.com/v1",
+        "UPLOAD_API_URL": "https://upload.sn-weegloo.com/v1",
         "AUTH_BEARER_TOKEN": "${PERSONAL_ACCESS_TOKEN}"
       }
     }
@@ -115,16 +115,16 @@ The MCP server tool groups are as follows:
 
 | Group | Description | URL |
 |----------|----------|-----|
-| {none}  | Includes the basic set of tools. | https://ai.weegloo.com/mcp |
-| core  | Includes the basic tools, excluding those related to WebHosting and Tokens. | https://ai.weegloo.com/mcp?group=core |
-| extra | Includes tools related to Usage, Webhooks, Tags, and Limits. | https://ai.weegloo.com/mcp?group=extra |
-| all | Includes all available tools. If you register the MCP server for this group, the other MCP servers are not required. | https://ai.weegloo.com/mcp?group=all |
+| {none}  | Includes the basic set of tools. | https://ai.sn-weegloo.com/mcp |
+| core  | Includes the basic tools, excluding those related to WebHosting and Tokens. | https://ai.sn-weegloo.com/mcp?group=core |
+| extra | Includes tools related to Usage, Webhooks, Tags, and Limits. | https://ai.sn-weegloo.com/mcp?group=extra |
+| all | Includes all available tools. If you register the MCP server for this group, the other MCP servers are not required. | https://ai.sn-weegloo.com/mcp?group=all |
 
 
 ## Documentation & Resources
 
-- [Official Weegloo MCP Server Documentation](https://docs.weegloo.com/en-US/ai/tools/mcp/)
+- [Official Weegloo MCP Server Documentation](https://docs.sn-weegloo.com/en-US/ai/tools/mcp/)
 
 ## Questions or Issues?
 
-For questions about the Weegloo MCP server or integration issues, please refer to the [official Weegloo documentation](https://docs.weegloo.com/en-US/ai/tools/mcp/).
+For questions about the Weegloo MCP server or integration issues, please refer to the [official Weegloo documentation](https://docs.sn-weegloo.com/en-US/ai/tools/mcp/).

@@ -29,6 +29,7 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import { VERSION_URL } from './github.js';
+import { NPX_PREFIX } from './cli.js';
 import { applyOriginMapping, TERMS_CONSENT_RULE_ID } from './origins.js';
 import { listWeeglooRuleFiles } from './io.js';
 
@@ -81,13 +82,14 @@ export const VERSION_CHECK_INTERVAL_HOURS = 4;
  * record), auto-adds genuinely new items, prunes upstream-deleted ones, and never touches MCP
  * config (so no token). No `--branch`: the update reads the branch from the agent's own stamp
  * `ref` (falling back to latest), so the command needs no per-branch variant — `--branch` stays
- * available as an explicit override / branch switch. No `--yes`: update mode has nothing to
- * prompt for, and suppressing prompts would also mute the rare shared-store conflict question
- * a human at a TTY should get to answer.
+ * available as an explicit override / branch switch. No installer `--yes`: update mode has
+ * nothing to prompt for, and suppressing prompts would also mute the rare shared-store conflict
+ * question a human at a TTY should get to answer. (The `-y` inside NPX_PREFIX is npx's install
+ * confirmation, not the installer's `--yes` — see cli.js NPM_REGISTRY.)
  * @param {{ agent: string, scope: string }} ctx
  */
 export function buildUpdateCommand({ agent, scope }) {
-  return `npx weegloo@latest --agent ${agent} --location ${scope} --update`;
+  return `${NPX_PREFIX} weegloo@latest --agent ${agent} --location ${scope} --update`;
 }
 
 /** The `.weegloo` state directory for a scope (global → home, project → project root). */

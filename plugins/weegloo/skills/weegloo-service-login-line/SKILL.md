@@ -1,13 +1,13 @@
 ---
 name: weegloo-service-login-line
-description: Provider-specific setup for Weegloo ServiceLogin with **LINE** (LINE Login) OAuth 2.0 — the exact LINE Developers steps to create a LINE Login channel and obtain the `clientId` / `clientSecret` (= Channel ID / Channel secret), the LINE Callback URL to register (`https://auth.weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/line`), the LINE-"Provider"-is-not-Weegloo's-provider terminology trap, and the separate email-permission application gotcha. Use ONLY when the chosen provider is LINE. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for Google, GitHub, Facebook, GitLab, Kakao, or Naver.
+description: Provider-specific setup for Weegloo ServiceLogin with **LINE** (LINE Login) OAuth 2.0 — the exact LINE Developers steps to create a LINE Login channel and obtain the `clientId` / `clientSecret` (= Channel ID / Channel secret), the LINE Callback URL to register (`https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/line`), the LINE-"Provider"-is-not-Weegloo's-provider terminology trap, and the separate email-permission application gotcha. Use ONLY when the chosen provider is LINE. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for Google, GitHub, Facebook, GitLab, Kakao, or Naver.
 ---
 
 # Weegloo ServiceLogin — LINE provider setup
 
 This is the **LINE instance** of the provider-agnostic ServiceLogin setup. It covers only the
 **LINE Developers** side: creating the LINE Login channel and producing the `clientId` / `clientSecret`
-that `ServiceLogin` needs. Everything else (the `auth.weegloo.com` wire protocol, the SDK,
+that `ServiceLogin` needs. Everything else (the `auth.sn-weegloo.com` wire protocol, the SDK,
 `callbackUrl`, `exchangeToken`, ACMA/ACDA scope) is provider-agnostic and lives in the spine.
 
 > **Prerequisite gate.** Use this **only after** you have a ServiceLogin design from
@@ -29,13 +29,13 @@ In the LINE Login channel, the **Callback URL** (under the channel's **LINE Logi
 the real `{spaceId}` substituted:
 
 ```
-https://auth.weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/line
+https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/line
 ```
 
 - The `/code/` segment is required — it is the **LINE → Weegloo** callback, **not** the browser entry
   URL (`…/login/oauth2/line`). Putting `/code/` in the entry URL, or the entry URL in this field,
   breaks sign-in (spine pitfall **A**).
-- It depends only on `auth.weegloo.com` + your `spaceId` + `line`, so it is **fully known now** —
+- It depends only on `auth.sn-weegloo.com` + your `spaceId` + `line`, so it is **fully known now** —
   register it before the app is deployed (spine pitfall **G**). `callbackUrl` is the deploy-dependent
   one; this is not.
 
@@ -51,7 +51,7 @@ step-by-step walkthrough, with the real `{spaceId}` already filled into the Call
    URL** — LINE relocates console pages, so a literal URL embedded here would go stale; look it up
    (e.g. LINE's official "LINE Login / Integrating LINE Login" docs).
 2. Fill the channel form (channel name, region, etc.) and ensure the **Web app** app type is enabled —
-   the browser reaches LINE via `auth.weegloo.com`, so no native/mobile app type is needed for this flow.
+   the browser reaches LINE via `auth.sn-weegloo.com`, so no native/mobile app type is needed for this flow.
 3. **Register the Callback URL:** on the channel's **LINE Login** tab, add **exactly** the Callback URL
    above (with the real `{spaceId}`).
 4. **Get the credentials:**

@@ -10,7 +10,7 @@ description: >
 
 # 서버 스펙 → 스킬·룰 동기화
 
-이 레포는 **규범 배포 레포**다. MCP 서버 구현은 여기 없고(원격 `ai.weegloo.com/mcp`),
+이 레포는 **규범 배포 레포**다. MCP 서버 구현은 여기 없고(원격 `ai.sn-weegloo.com/mcp`),
 여기 있는 건 에이전트에게 weegloo를 가르치는 스킬 23개 + 룰 7개다. 서버가 바뀌면
 사람이 손으로 옮겨 적어야 하는데, 그 "어디를 보고 무엇을 고칠지"를 이 스킬이 담당한다.
 
@@ -300,7 +300,7 @@ curl -fsS "$SWAGGER_CMA" | jq -r '.paths[][].operationId' | sort -u > /tmp/spec-
 
 > **⚠️ 배포되는 룰과 충돌한다 — 임의로 curl 하지 마라.**
 > `weegloo-global-rules` / `weegloo-api-endpoints`는 "에이전트는 MCP만, 직접 HTTP·Swagger 호출 금지"
-> 이며 **예외를 정확히 두 개**(`policy/terms`, `ai.weegloo.com/v1/version`)로 못박아 뒀다. 그 룰이
+> 이며 **예외를 정확히 두 개**(`policy/terms`, `ai.sn-weegloo.com/v1/version`)로 못박아 뒀다. 그 룰이
 > 로드된 세션에서 이 fetch는 위반이다. 순서대로:
 > 1. **세션의 MCP 툴 목록**으로 1차 교차검증(아래 "보조 신호").
 > 2. Swagger 본문이 필요하면 **사용자에게 받는다** — `! curl …` 로 직접 실행해 붙여넣게 하거나 파일

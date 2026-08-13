@@ -6,8 +6,8 @@
  * 치환은 HOST 문자열 단위로 한다: 본문에는 scheme 없는
  * bare 호스트 언급이 ~52곳 있어(auth 29·cma 17…) origin 단위 치환만으로는 산문 안내가
  * 프로덕션 호스트로 남아 뒤섞인다. 호스트 치환은 scheme URL(경로 보존)과 bare 언급을 한 번에
- * 처리한다. 단 8개 호스트는 상호 비중첩이 **아니다** — `acma.weegloo.com` ⊃ `cma.weegloo.com`,
- * `acda.weegloo.com` ⊃ `cda.weegloo.com` — 그래서 단순 replaceAll이 아니라 **호스트 문자
+ * 처리한다. 단 8개 호스트는 상호 비중첩이 **아니다** — `acma.sn-weegloo.com` ⊃ `cma.sn-weegloo.com`,
+ * `acda.sn-weegloo.com` ⊃ `cda.sn-weegloo.com` — 그래서 단순 replaceAll이 아니라 **호스트 문자
  * 경계 검사**(앞뒤가 [A-Za-z0-9-]가 아닐 때만 매칭)로 치환한다. 이 경계 덕에 순서 무관하고,
  * 오답 예시(`cda-weegloo.com`)도 dash 경계라 안 걸린다.
  *
@@ -25,14 +25,14 @@ export const TERMS_CONSENT_RULE_ID = 'weegloo-terms-consent';
  * 에러(오타가 조용히 무시되지 않도록). 입력에서 전체 origin 키도 받아 서비스명으로 정규화한다.
  */
 export const MAPPABLE_SERVICES = {
-  cma: 'https://cma.weegloo.com',
-  cda: 'https://cda.weegloo.com',
-  acma: 'https://acma.weegloo.com',
-  acda: 'https://acda.weegloo.com',
-  upload: 'https://upload.weegloo.com', // manifest.mcp.uploadApiUrl 포함
-  auth: 'https://auth.weegloo.com', // 최대 표면(~50곳) — provider redirect URI 포함
-  console: 'https://console.weegloo.com', // PAT 페이지 + FE 로그인 팝업 origin
-  ai: 'https://ai.weegloo.com', // /v1/version(버전체크) + /mcp(MCP 서버)
+  cma: 'https://cma.sn-weegloo.com',
+  cda: 'https://cda.sn-weegloo.com',
+  acma: 'https://acma.sn-weegloo.com',
+  acda: 'https://acda.sn-weegloo.com',
+  upload: 'https://upload.sn-weegloo.com', // manifest.mcp.uploadApiUrl 포함
+  auth: 'https://auth.sn-weegloo.com', // 최대 표면(~50곳) — provider redirect URI 포함
+  console: 'https://console.sn-weegloo.com', // PAT 페이지 + FE 로그인 팝업 origin
+  ai: 'https://ai.sn-weegloo.com', // /v1/version(버전체크) + /mcp(MCP 서버)
 };
 
 /** 전체 origin 키 입력을 서비스명으로 되돌리는 역방향 색인. */
@@ -126,8 +126,8 @@ export function loadOrigins(rawInput) {
 
 /**
  * 호스트 경계 매칭 패턴: 앞뒤가 호스트 구성 문자([A-Za-z0-9-])가 아닐 때만 매칭.
- * `acma.weegloo.com` 안의 `cma.weegloo.com`(앞이 'a')은 매칭 안 되고,
- * `https://cma.weegloo.com/x`(앞 '/'), 백틱/공백 속 bare 언급, 문장 끝 '.'은 매칭된다.
+ * `acma.sn-weegloo.com` 안의 `cma.sn-weegloo.com`(앞이 'a')은 매칭 안 되고,
+ * `https://cma.sn-weegloo.com/x`(앞 '/'), 백틱/공백 속 bare 언급, 문장 끝 '.'은 매칭된다.
  */
 function hostPattern(host) {
   const escaped = host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

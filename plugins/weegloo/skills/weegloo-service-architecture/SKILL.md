@@ -18,7 +18,7 @@ Base URLs, Accept headers, and OpenAPI links live in **`weegloo-api-endpoints`**
 Every API choice below depends on **which of the two Weegloo identities** is calling.
 
 - **Weegloo User** — a Weegloo platform account (self sign-up); works a Space as its **owner** or an **invited** member (joining someone else's Space is invite-only). Token (PAT or console FE login) hits **CMA / Upload / CDA**. Details: **`weegloo-user-login`** skill.
-- **Service User** — an end-user of the product the Space ships; **anyone may sign up** through a ServiceLogin OAuth provider. Token (issued via `auth.weegloo.com`) hits **ACMA / ACDA**, plus **Upload** for member-contributed media (followed by **ACMA** Media create — never CMA Media). Details: **`weegloo-service-login`** skill.
+- **Service User** — an end-user of the product the Space ships; **anyone may sign up** through a ServiceLogin OAuth provider. Token (issued via `auth.sn-weegloo.com`) hits **ACMA / ACDA**, plus **Upload** for member-contributed media (followed by **ACMA** Media create — never CMA Media). Details: **`weegloo-service-login`** skill.
 
 These identity systems are **completely separate**: a Service User is **not** a Weegloo platform account and cannot reach **CMA / CDA**; a Weegloo User is **not** a Service User of the product and is not the right identity for end-user features. **Upload** is the one shared surface — both Bearers are accepted there; the follow-up Media create stays on the matching plane (CMA for Weegloo Users, ACMA for Service Users).
 
@@ -169,7 +169,7 @@ This chain is the intended path: pick the architecture here, then walk skills 1�
 - **`weegloo-upload-api`** — Upload REST API → Media / WebHosting create (the two-step file-upload flow for product code), and the Upload-API-vs-`weegloo-upload`-MCP distinction.
 - **`weegloo-user-login`** — Weegloo User login (PAT + console FE popup) for CMA / Upload / CDA. The admin-side identity model.
 - **`weegloo-service-login`** — ServiceLogin / ServiceUser / ServiceUserRole / `isAdmin` mechanics and Bearer Token scope. The end-user identity model.
-- **`weegloo-service-login-sdk`** — OAuth wire protocol on `auth.weegloo.com` and the official browser SDK for ServiceLogin.
+- **`weegloo-service-login-sdk`** — OAuth wire protocol on `auth.sn-weegloo.com` and the official browser SDK for ServiceLogin.
 - **`weegloo-delivery-access-token`** — least-privilege DeliveryAccessToken creation for CDA.
 - **`weegloo-space-access-token`** — Space-scoped read+write token whose power is set by a bound `SpaceRole`.
 - **`weegloo-space-role`** — SpaceRole / ServiceUserRole permission filters (`createdBy`, `:self`).

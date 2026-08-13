@@ -220,7 +220,7 @@ Fields support **`validations`**; the CMA accepts the kinds summarized in **`Fie
 - **Location**: `{ "latitude": <number>, "longitude": <number> }` — use the **full** keys; **`lat`/`lng`/`lon` are rejected**. Example: `{ "ko-KR": { "latitude": 37.5662, "longitude": 126.9910 } }`.
 - **Refer**: the Refer shape `{ "sys": { "type": "Refer", "id": "<id>", "targetType": "Content" | "Media" } }` — **not** a bare id string.
 
-**The canonical, complete field-value spec lives in the API reference — read it rather than relying on this list:** https://docs.weegloo.com/api/reference/cma/content (the `fields` per-locale map and `Refer` shape; locale-key rules in **`weegloo-default-locale`**). The notes above are only the high-frequency gotchas, not the full spec.
+**The canonical, complete field-value spec lives in the API reference — read it rather than relying on this list:** https://docs.sn-weegloo.com/api/reference/cma/content (the `fields` per-locale map and `Refer` shape; locale-key rules in **`weegloo-default-locale`**). The notes above are only the high-frequency gotchas, not the full spec.
 
 ---
 
@@ -267,8 +267,8 @@ simpler" - that is the rationalization this section exists to stop.
 Full reference model (single / array / bidirectional / self / circular +
 `include` resolution) and the normalize principle live in the Weegloo docs:
 **Reference** and **Content modeling** core-concept pages
-(`docs.weegloo.com/getting-started/core-concepts/common/reference.md`,
-`docs.weegloo.com/getting-started/core-concepts/content-and-media/content-modeling.md`).
+(`docs.sn-weegloo.com/getting-started/core-concepts/common/reference.md`,
+`docs.sn-weegloo.com/getting-started/core-concepts/content-and-media/content-modeling.md`).
 
 ## Don't model what the platform provides
 

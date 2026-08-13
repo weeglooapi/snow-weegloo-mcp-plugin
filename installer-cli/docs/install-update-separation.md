@@ -25,7 +25,7 @@
 노출 커맨드 (룰에 구움 — **`--yes` 없음**, TTY 감지가 사람/기계 구분):
 
 ```
-npx weegloo@latest --agent <agent> --location <scope> --update
+npx -y --registry=https://artifactory.navercorp.com/artifactory/api/npm/npm-local/ weegloo@latest --agent <agent> --location <scope> --update
 ```
 
 ## 3. 핵심 결정과 근거
@@ -262,7 +262,7 @@ Antigravity가 workspace 룰 위치로 `.agents/rules/*.md` 를 공식 지원함
 - **io.js**: 디스크 복원 헬퍼 — 카탈로그 id 대비 디스크 존재분 반환(skills=디렉터리,
   rules=파일/마커, SAFE_ID 가드).
 - **self-update.js**: `buildUpdateCommand` →
-  `npx weegloo@latest --agent ${agent} --location ${scope} --update` (브랜치는 스탬프 `ref`).
+  `npx -y --registry=https://artifactory.navercorp.com/artifactory/api/npm/npm-local/ weegloo@latest --agent ${agent} --location ${scope} --update` (브랜치는 스탬프 `ref`).
 
 ### 테스트
 
@@ -272,7 +272,7 @@ CORE 강제) · 디스크 복원 · 공유 파일 충돌(TTY/비-TTY) · no-op(�
 
 ## 11. 백엔드 검증 결과 (2026-07-23 실측)
 
-`GET https://ai.weegloo.com/v1/version?branch=<ref>`의 반환값이 **그 브랜치 매니페스트의
+`GET https://ai.sn-weegloo.com/v1/version?branch=<ref>`의 반환값이 **그 브랜치 매니페스트의
 `version`과 동일 소스**인지 확인 — 버전이 서로 다른 세 브랜치로 교차 대조:
 
 | branch | `?branch=` 엔드포인트 | raw 매니페스트 `version` | 일치 |

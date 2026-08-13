@@ -1,13 +1,13 @@
 ---
 name: weegloo-service-login-github
-description: Provider-specific setup for Weegloo ServiceLogin with **GitHub** OAuth 2.0 — the exact GitHub steps to register an OAuth App and obtain the `clientId` / `clientSecret`, the GitHub Authorization callback URL to register (`https://auth.weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/github`), the single-callback-URL and generate-secret-shown-once gotchas, and the walkthrough to hand the user when asking for the blocking credentials. Use ONLY when the chosen provider is GitHub. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for another provider (Google, Facebook, GitLab, LINE, Kakao, or Naver).
+description: Provider-specific setup for Weegloo ServiceLogin with **GitHub** OAuth 2.0 — the exact GitHub steps to register an OAuth App and obtain the `clientId` / `clientSecret`, the GitHub Authorization callback URL to register (`https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/github`), the single-callback-URL and generate-secret-shown-once gotchas, and the walkthrough to hand the user when asking for the blocking credentials. Use ONLY when the chosen provider is GitHub. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for another provider (Google, Facebook, GitLab, LINE, Kakao, or Naver).
 ---
 
 # Weegloo ServiceLogin — GitHub provider setup
 
 This is the **GitHub instance** of the provider-agnostic ServiceLogin setup. It covers only the
 **GitHub** side: registering the OAuth App and producing the `clientId` / `clientSecret` that
-`ServiceLogin` needs. Everything else (the `auth.weegloo.com` wire protocol, the SDK, `callbackUrl`,
+`ServiceLogin` needs. Everything else (the `auth.sn-weegloo.com` wire protocol, the SDK, `callbackUrl`,
 `exchangeToken`, ACMA/ACDA scope) is provider-agnostic and lives in the spine.
 
 > **Prerequisite gate.** Use this **only after** you have a ServiceLogin design from
@@ -23,13 +23,13 @@ This is the **GitHub instance** of the provider-agnostic ServiceLogin setup. It 
 In the GitHub OAuth App, the **Authorization callback URL** is, with the real `{spaceId}` substituted:
 
 ```
-https://auth.weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/github
+https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/github
 ```
 
 - The `/code/` segment is required — it is the **GitHub → Weegloo** callback, **not** the browser entry
   URL (`…/login/oauth2/github`). Putting `/code/` in the entry URL, or the entry URL in this field,
   breaks sign-in (spine pitfall **A**).
-- It depends only on `auth.weegloo.com` + your `spaceId` + `github`, so it is **fully known now** —
+- It depends only on `auth.sn-weegloo.com` + your `spaceId` + `github`, so it is **fully known now** —
   register it before the app is deployed (spine pitfall **G**). `callbackUrl` is the deploy-dependent
   one; this is not.
 - **GitHub OAuth Apps allow exactly one callback URL** (unlike GitHub *Apps*). So this single value must
@@ -54,7 +54,7 @@ step-by-step walkthrough, with the real `{spaceId}` already filled into the call
    - **Authorization callback URL** — paste **exactly** the callback URL above (with the real
      `{spaceId}`). This is the one field that matters for sign-in.
    - There is **no "OAuth consent screen" / Test users** step (that is Google-only) and **no JavaScript
-     origins** field — the browser navigates to `auth.weegloo.com`, never to GitHub directly.
+     origins** field — the browser navigates to `auth.sn-weegloo.com`, never to GitHub directly.
    - You do **not** pick OAuth scopes here — there is no scope field on a GitHub OAuth App. Weegloo
      requests the scopes it needs (`read:user`, `user:email`) automatically at sign-in. The user only
      supplies the `clientId` / `clientSecret` and the callback URL.
@@ -77,7 +77,7 @@ Weegloo aborts the sign-in with `WGL422056`.
 
 Where this surfaces matters: it happens server-side on the `…/login/oauth2/code/github` callback,
 **before** any redirect to your `callbackUrl`. Weegloo responds with an HTTP 400 and a localized JSON
-body on the `auth.weegloo.com` domain (the body carries a localized reason/suggestion, not the literal
+body on the `auth.sn-weegloo.com` domain (the body carries a localized reason/suggestion, not the literal
 `WGL422056` string). There is no `exchangeToken` and no return trip to the app, so the SDK's
 `handleCallback()` never runs — the product **cannot intercept or recover from this case at runtime**.
 

@@ -15,8 +15,8 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const SCHEMA_VERSION = 1;
-const DEFAULT_MCP_URL = 'https://ai.weegloo.com/mcp';
-const DEFAULT_UPLOAD_API_URL = 'https://upload.weegloo.com/v1';
+const DEFAULT_MCP_URL = 'https://ai.sn-weegloo.com/mcp';
+const DEFAULT_UPLOAD_API_URL = 'https://upload.sn-weegloo.com/v1';
 
 /** Bytewise comparator — locale/ICU-independent so manifest order is identical everywhere. */
 const byteCompare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);

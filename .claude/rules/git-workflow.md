@@ -1,5 +1,5 @@
 ---
-description: Git workflow conventions for the weegloo-mcp-plugin repo
+description: Git workflow conventions for the snow-weegloo-mcp-plugin repo
 ---
 
 # Git workflow

@@ -4,16 +4,31 @@ A CLI to set up the Weegloo MCP plugin for Cursor, Claude Code, Codex, Antigravi
 
 ## Usage
 
+This is the internal build, published to the Naver Artifactory registry, so every invocation has to name that registry:
+
 ```bash
-npx weegloo@latest
+npx -y --registry=https://artifactory.navercorp.com/artifactory/api/npm/npm-local/ weegloo@latest
+```
+
+Two things about that line are load-bearing:
+
+- **`--registry` must come *before* `weegloo@latest`.** `npx` forwards everything *after* the package spec to the command itself, so a trailing `--registry` never reaches npx — it would resolve `weegloo` from the **public** npm registry (a different package of the same name) and then the installer would reject the unknown option.
+- **`-y` before the spec is npx's** "Ok to proceed?" install confirmation. The installer's own `-y` / `--yes` (non-interactive mode) goes *after* the spec — both may appear in one command, and they mean different things.
+
+To skip the flag, point npm at the registry once and use the plain commands below as-is:
+
+```bash
+npm config set registry https://artifactory.navercorp.com/artifactory/api/npm/npm-local/
 ```
 
 Or install globally:
 
 ```bash
-npm install -g weegloo
+npm install -g --registry=https://artifactory.navercorp.com/artifactory/api/npm/npm-local/ weegloo
 weegloo
 ```
+
+> The examples in the rest of this document are written as `npx weegloo@…`. Prepend `-y --registry=…` to each, or configure the registry once as above.
 
 ## CLI options
 
@@ -55,7 +70,7 @@ npx weegloo@latest -y --agent claude --no-mcp
 WEEGLOO_TOKEN=… npx weegloo@latest -y --agent codex --host xcode
 
 # Update an existing install (selection preserved; no token needed)
-npx weegloo@latest --agent claude --location global --update
+npx -y --registry=https://artifactory.navercorp.com/artifactory/api/npm/npm-local/ weegloo@latest --agent claude --location global --update
 
 # Pre-fill a couple of choices, get prompted for the rest (interactive)
 npx weegloo@latest --agent cursor --location global
@@ -70,7 +85,7 @@ Selecting **Xcode** in the interactive IDE list (then choosing Claude Code or Co
 ```toml
 [mcp_servers.weegloo-upload.env]
 PATH = "/Users/you/.nvm/versions/node/v18.20.8/bin:/usr/bin:/bin"
-UPLOAD_API_URL = "https://upload.weegloo.com/v1"
+UPLOAD_API_URL = "https://upload.sn-weegloo.com/v1"
 AUTH_BEARER_TOKEN = "…"
 ```
 
@@ -99,7 +114,7 @@ WEEGLOO_REF=some-branch npx weegloo@latest
 ## Updating
 
 ```bash
-npx weegloo@latest --agent claude --location global --update
+npx -y --registry=https://artifactory.navercorp.com/artifactory/api/npm/npm-local/ weegloo@latest --agent claude --location global --update
 ```
 
 This is the command the installed `weegloo-version` rule shows when a newer version is available. Unlike an install, `--update`:
@@ -199,14 +214,14 @@ Android Studio writes **both** MCP servers into `mcp.json` ([docs](https://devel
 
 ## Available Skills and Rules
 
-The full, current catalog (20+ skills, 7 rules) is shown in the interactive picker and lives in [`plugins/weegloo/`](https://github.com/weeglooapi/weegloo-mcp-plugin/tree/latest/plugins/weegloo) — it changes with every release, so it is not duplicated here. Two rules are core and always installed: `weegloo-version` (the update notifier) and `weegloo-terms-consent` (the terms gate).
+The full, current catalog (20+ skills, 7 rules) is shown in the interactive picker and lives in [`plugins/weegloo/`](https://github.com/weeglooapi/snow-weegloo-mcp-plugin/tree/latest/plugins/weegloo) — it changes with every release, so it is not duplicated here. Two rules are core and always installed: `weegloo-version` (the update notifier) and `weegloo-terms-consent` (the terms gate).
 
 ## Requirements
 
 - Node.js >= 18
-- Weegloo Personal Access Token ([generate from the console](https://console.weegloo.com))
+- Weegloo Personal Access Token ([generate from the console](https://console.sn-weegloo.com))
 
 ## Links
 
-- [Weegloo Documentation](https://docs.weegloo.com/en-US/ai/tools/mcp/)
-- [GitHub Repository](https://github.com/weeglooapi/weegloo-mcp-plugin)
+- [Weegloo Documentation](https://docs.sn-weegloo.com/en-US/ai/tools/mcp/)
+- [GitHub Repository](https://github.com/weeglooapi/snow-weegloo-mcp-plugin)

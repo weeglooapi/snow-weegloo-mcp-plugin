@@ -14,7 +14,7 @@ import { installAndroidStudio } from './androidstudio.js';
 import { installCodex, handleCodexMcpLogin, printCodexLoginNotice } from './codex.js';
 import { validateToken, cmaMeUrl } from './validate-token.js';
 
-const PAT_GENERATION_URL = 'https://console.weegloo.com/account/profile/personal-access-tokens';
+const PAT_GENERATION_URL = 'https://console.sn-weegloo.com/account/profile/personal-access-tokens';
 
 const MCP_GROUP_CHOICES = [
   {
@@ -45,7 +45,7 @@ function printBanner() {
   );
   console.log(
     chalk.bold.cyan('  │') +
-    chalk.dim('     https://weegloo.com' + ' '.repeat(24)) +
+    chalk.dim('     https://weegloo.navercorp.com' + ' '.repeat(14)) +
     chalk.bold.cyan('│')
   );
   console.log(chalk.bold.cyan('  └' + '─'.repeat(48) + '┘'));
@@ -616,7 +616,7 @@ async function main() {
     console.log();
   }
   console.log(
-    '  ' + chalk.dim('Docs: ') + chalk.cyan('https://docs.weegloo.com/en-US/ai/tools/mcp/')
+    '  ' + chalk.dim('Docs: ') + chalk.cyan('https://docs.sn-weegloo.com/en-US/ai/tools/mcp/')
   );
   console.log();
 }

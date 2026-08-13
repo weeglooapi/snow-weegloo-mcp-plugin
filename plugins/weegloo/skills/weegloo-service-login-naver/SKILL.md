@@ -1,13 +1,13 @@
 ---
 name: weegloo-service-login-naver
-description: Provider-specific setup for Weegloo ServiceLogin with **Naver** (Naver Login) OAuth 2.0 — the exact Naver Developers steps to register an application and obtain the `clientId` / `clientSecret`, the Naver Callback URL to register (`https://auth.weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/naver`), the "API to use = Naver Login" selection, the information-to-collect selection needed for email, and the development-status / review gotcha that limits sign-in to registered test members. Use ONLY when the chosen provider is Naver. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for Google, GitHub, Facebook, GitLab, LINE, or Kakao.
+description: Provider-specific setup for Weegloo ServiceLogin with **Naver** (Naver Login) OAuth 2.0 — the exact Naver Developers steps to register an application and obtain the `clientId` / `clientSecret`, the Naver Callback URL to register (`https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/naver`), the "API to use = Naver Login" selection, the information-to-collect selection needed for email, and the development-status / review gotcha that limits sign-in to registered test members. Use ONLY when the chosen provider is Naver. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for Google, GitHub, Facebook, GitLab, LINE, or Kakao.
 ---
 
 # Weegloo ServiceLogin — Naver provider setup
 
 This is the **Naver instance** of the provider-agnostic ServiceLogin setup. It covers only the
 **Naver Developers** side: registering the application and producing the `clientId` / `clientSecret`
-that `ServiceLogin` needs. Everything else (the `auth.weegloo.com` wire protocol, the SDK,
+that `ServiceLogin` needs. Everything else (the `auth.sn-weegloo.com` wire protocol, the SDK,
 `callbackUrl`, `exchangeToken`, ACMA/ACDA scope) is provider-agnostic and lives in the spine.
 
 > **Prerequisite gate.** Use this **only after** you have a ServiceLogin design from
@@ -28,13 +28,13 @@ In the Naver Developers console, the **Callback URL** (under the **Naver Login**
 the real `{spaceId}` substituted:
 
 ```
-https://auth.weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/naver
+https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/naver
 ```
 
 - The `/code/` segment is required — it is the **Naver → Weegloo** callback, **not** the browser entry
   URL (`…/login/oauth2/naver`). Putting `/code/` in the entry URL, or the entry URL in this field,
   breaks sign-in (spine pitfall **A**).
-- It depends only on `auth.weegloo.com` + your `spaceId` + `naver`, so it is **fully known now** —
+- It depends only on `auth.sn-weegloo.com` + your `spaceId` + `naver`, so it is **fully known now** —
   register it before the app is deployed (spine pitfall **G**). `callbackUrl` is the deploy-dependent
   one; this is not.
 
@@ -55,7 +55,7 @@ user this step-by-step walkthrough, with the real `{spaceId}` already filled int
 4. **Environment / Callback URL:** add the **web environment that matches your product — PC web, mobile
    web, or both** — and register **exactly** the Callback URL above (with the real `{spaceId}`) under
    it. The Callback URL is the **same regardless of the user's device**: the OAuth redirect always
-   targets `auth.weegloo.com`, not your app, so the "environment" only tells Naver which client
+   targets `auth.sn-weegloo.com`, not your app, so the "environment" only tells Naver which client
    platform the product runs on — it does not change the Callback URL. If a **service URL** is also
    required per environment, use your app's base URL (or a placeholder until deploy — it is not part of
    the OAuth handshake the way the Callback URL is).

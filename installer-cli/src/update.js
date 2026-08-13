@@ -31,6 +31,7 @@ import ora from 'ora';
 import { select } from '@inquirer/prompts';
 
 import { REPO, loadResources } from './github.js';
+import { NPX_PREFIX } from './cli.js';
 import {
   CORE_RULE_IDS,
   applySelfUpdateTemplate,
@@ -295,7 +296,7 @@ export async function runUpdate(config, deps = {}) {
     // Nothing installed here. Updating is "refresh what exists" — installing is a different,
     // deliberate act (and silently installing everything is the exact bug --update replaces).
     log(chalk.yellow('  ⚠  ') + `No weegloo skills/rules found for ${agent} at ${scope} scope.`);
-    log(chalk.dim(`     Nothing to update. To install: npx weegloo@latest --agent ${agent} --location ${scope}`));
+    log(chalk.dim(`     Nothing to update. To install: ${NPX_PREFIX} weegloo@latest --agent ${agent} --location ${scope}`));
     log('');
     return { ok: true, status: 'nothing-installed' };
   }

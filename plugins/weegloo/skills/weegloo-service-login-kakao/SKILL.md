@@ -1,13 +1,13 @@
 ---
 name: weegloo-service-login-kakao
-description: Provider-specific setup for Weegloo ServiceLogin with **Kakao** (Kakao Login) OAuth 2.0 — the exact Kakao Developers steps to create an app and obtain the `clientId` / `clientSecret`, the Kakao Redirect URI to register (`https://auth.weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/kakao`), the REST-API-key-is-the-clientId gotcha, the Client Secret generate-and-enable gotcha, the consent-item / Business-app requirement for email, and the walkthrough to hand the user when asking for the blocking credentials. Use ONLY when the chosen provider is Kakao. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for Google, GitHub, Facebook, GitLab, LINE, or Naver.
+description: Provider-specific setup for Weegloo ServiceLogin with **Kakao** (Kakao Login) OAuth 2.0 — the exact Kakao Developers steps to create an app and obtain the `clientId` / `clientSecret`, the Kakao Redirect URI to register (`https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/kakao`), the REST-API-key-is-the-clientId gotcha, the Client Secret generate-and-enable gotcha, the consent-item / Business-app requirement for email, and the walkthrough to hand the user when asking for the blocking credentials. Use ONLY when the chosen provider is Kakao. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for Google, GitHub, Facebook, GitLab, LINE, or Naver.
 ---
 
 # Weegloo ServiceLogin — Kakao provider setup
 
 This is the **Kakao instance** of the provider-agnostic ServiceLogin setup. It covers only the
 **Kakao Developers** side: creating the app and producing the `clientId` / `clientSecret` that
-`ServiceLogin` needs. Everything else (the `auth.weegloo.com` wire protocol, the SDK, `callbackUrl`,
+`ServiceLogin` needs. Everything else (the `auth.sn-weegloo.com` wire protocol, the SDK, `callbackUrl`,
 `exchangeToken`, ACMA/ACDA scope) is provider-agnostic and lives in the spine.
 
 > **Prerequisite gate.** Use this **only after** you have a ServiceLogin design from
@@ -24,13 +24,13 @@ In the Kakao Developers console, the **Redirect URI** (under **Kakao Login**) is
 `{spaceId}` substituted:
 
 ```
-https://auth.weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/kakao
+https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/kakao
 ```
 
 - The `/code/` segment is required — it is the **Kakao → Weegloo** callback, **not** the browser entry
   URL (`…/login/oauth2/kakao`). Putting `/code/` in the entry URL, or the entry URL in this field,
   breaks sign-in (spine pitfall **A**).
-- It depends only on `auth.weegloo.com` + your `spaceId` + `kakao`, so it is **fully known now** —
+- It depends only on `auth.sn-weegloo.com` + your `spaceId` + `kakao`, so it is **fully known now** —
   register it before the app is deployed (spine pitfall **G**). `callbackUrl` is the deploy-dependent
   one; this is not.
 
@@ -52,8 +52,8 @@ step-by-step walkthrough, with the real `{spaceId}` already filled into the Redi
    **ON**. Sign-in stays inert until this is on.
 4. **Register the Redirect URI:** still under **Kakao Login**, add **exactly** the Redirect URI above
    (with the real `{spaceId}`). If the console also requires a registered **Web platform** site domain
-   before it will save a Redirect URI, register `https://auth.weegloo.com` there (**App settings →
-   Platform → Web**) — the browser reaches Kakao via `auth.weegloo.com`, never your app directly.
+   before it will save a Redirect URI, register `https://auth.sn-weegloo.com` there (**App settings →
+   Platform → Web**) — the browser reaches Kakao via `auth.sn-weegloo.com`, never your app directly.
 5. **Generate AND enable the Client Secret:** **Kakao Login → Security → Client secret**, generate a
    code, then set its **activation state** to **Enable**. Copy the generated value — this is
    `clientSecret`. A secret that is generated but left **disabled** (or never generated) is a common

@@ -53,7 +53,7 @@ whatever its role — use a console session or a PAT (**`weegloo-space-access-to
 4. The product stores the token (typically in browser storage for static sites; the same browser-security guidance — origin checks, prefer `sessionStorage` over `localStorage`, never log tokens — applies as in **`weegloo-user-login`**).
 5. The product calls **ACMA** / **ACDA** with **`Authorization: Bearer <token>`**.
 
-**Implementation:** the wire protocol on `auth.weegloo.com` (login redirect, `exchangeToken` POST exchange, refresh, logout), the official **`weegloo-service-user`** npm SDK, and the browser-specific gotchas (entry URL vs the provider redirect URI, GET-with-body limitation, `exchangeToken` URL stripping) live in the **`weegloo-service-login-sdk`** skill. Use that skill - and the SDK - instead of re-deriving the protocol when wiring a browser app.
+**Implementation:** the wire protocol on `auth.sn-weegloo.com` (login redirect, `exchangeToken` POST exchange, refresh, logout), the official **`weegloo-service-user`** npm SDK, and the browser-specific gotchas (entry URL vs the provider redirect URI, GET-with-body limitation, `exchangeToken` URL stripping) live in the **`weegloo-service-login-sdk`** skill. Use that skill - and the SDK - instead of re-deriving the protocol when wiring a browser app.
 
 ### Native apps (Android / iOS)
 
@@ -63,20 +63,20 @@ ServiceLogin is **not browser-only** — native mobile apps can use it too. One 
 
 A Bearer Token issued by ServiceLogin may be used with:
 
-- **ACMA** (`https://acma.weegloo.com`) - app-managed members' content management.
-- **ACDA** (`https://acda.weegloo.com`) - app-managed members' delivery (read).
-- **Upload** (`https://upload.weegloo.com`) - file uploads as the member. Follow with an **ACMA** Media create call to attach the resulting asset (see *Member-contributed media* below). **CMA** Media create is still off-limits for this token.
+- **ACMA** (`https://acma.sn-weegloo.com`) - app-managed members' content management.
+- **ACDA** (`https://acda.sn-weegloo.com`) - app-managed members' delivery (read).
+- **Upload** (`https://upload.sn-weegloo.com`) - file uploads as the member. Follow with an **ACMA** Media create call to attach the resulting asset (see *Member-contributed media* below). **CMA** Media create is still off-limits for this token.
 
 It **must not** be used against:
 
-- **CMA** (`https://cma.weegloo.com`) — that requires a **Weegloo User** session (PAT or console FE login). See **`weegloo-user-login`**. This includes **CMA Media** create / update / delete; member-uploaded media must be created via **ACMA**.
-- **CDA** (`https://cda.weegloo.com`) — public delivery uses a **`DeliveryAccessToken`** referencing a `SpaceRole` (a Weegloo User token also works on CDA but is over-privileged for browser distribution — see **`weegloo-delivery-access-token`**).
+- **CMA** (`https://cma.sn-weegloo.com`) — that requires a **Weegloo User** session (PAT or console FE login). See **`weegloo-user-login`**. This includes **CMA Media** create / update / delete; member-uploaded media must be created via **ACMA**.
+- **CDA** (`https://cda.sn-weegloo.com`) — public delivery uses a **`DeliveryAccessToken`** referencing a `SpaceRole` (a Weegloo User token also works on CDA but is over-privileged for browser distribution — see **`weegloo-delivery-access-token`**).
 
 ## Member-contributed media — Upload → ACMA Media create
 
 When a ServiceUser uploads a file (avatar, attachment, forum image, etc.):
 
-1. Call **Upload** (`https://upload.weegloo.com`) with **`Authorization: Bearer <ServiceLogin token>`** to receive the upload reference for the file.
+1. Call **Upload** (`https://upload.sn-weegloo.com`) with **`Authorization: Bearer <ServiceLogin token>`** to receive the upload reference for the file.
 2. Call **ACMA** Media create with the same Bearer, passing that upload reference, so the Media resource is owned by the calling ServiceUser. The own-resource CRUD and `isAdmin` rules below then apply to that Media.
 
 Do **not** create the Media via **CMA** — CMA is Weegloo-User-only and the member would need a Weegloo platform account, which is the wrong identity model. The Upload step is the only shared surface between the two identities; the Media resource itself stays partitioned (CMA Media for Weegloo Users, ACMA Media for ServiceUsers).
@@ -87,9 +87,9 @@ Base URLs and Accept-header rules: **`weegloo-api-endpoints`** rule.
 
 To fetch the **`ServiceUser`** for the active ServiceLogin session (profile, `roleOverride`, `isAdmin`, etc.):
 
-- **Correct:** **`GET https://acma.weegloo.com/v1/me`** with **`Authorization: Bearer`** and the ServiceLogin access token.
+- **Correct:** **`GET https://acma.sn-weegloo.com/v1/me`** with **`Authorization: Bearer`** and the ServiceLogin access token.
 
-**Wrong (do not use):** **`GET https://acma.weegloo.com/v1/spaces/{spaceId}/me`**. ACMA does **not** expose the current member at a space-prefix path. **`auth.weegloo.com`** correctly uses **`/v1/spaces/{spaceId}/...`** for OAuth, which invites the mistaken pattern—but on **ACMA** the identity endpoint is **`/v1/me`** only.
+**Wrong (do not use):** **`GET https://acma.sn-weegloo.com/v1/spaces/{spaceId}/me`**. ACMA does **not** expose the current member at a space-prefix path. **`auth.sn-weegloo.com`** correctly uses **`/v1/spaces/{spaceId}/...`** for OAuth, which invites the mistaken pattern—but on **ACMA** the identity endpoint is **`/v1/me`** only.
 
 ## Permission resolution per ServiceUser
 

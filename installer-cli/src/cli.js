@@ -27,11 +27,28 @@ export const HOSTS = ['xcode'];
 /** Agents that can run *inside* a GUI host (Xcode Intelligence hosts only these). */
 export const HOSTABLE_AGENTS = ['claude', 'codex'];
 
+/**
+ * Internal npm registry this build is published to. Every runnable `npx` line we PRINT
+ * (help usage, the update command baked into the weegloo-version rule, the "to install"
+ * hint) has to carry it, because the public npm registry also has a `weegloo` package —
+ * omitting the flag silently installs the community CLI instead of this one.
+ *
+ * Flag ORDER is load-bearing: `npx` passes everything AFTER the package spec through to
+ * the command, so `--registry` must come BEFORE `weegloo@latest` to be seen by npx at all
+ * (after it, the installer would receive it as an unknown option and reject it). `-y`
+ * suppresses npx's own "Ok to proceed?" install confirmation — it is npx's flag, NOT the
+ * installer's `--yes`, so the installer still prompts where it means to.
+ */
+export const NPM_REGISTRY = 'https://artifactory.navercorp.com/artifactory/api/npm/npm-local/';
+
+/** The `npx` prefix (with registry) that every printed invocation of this CLI must use. */
+export const NPX_PREFIX = `npx -y --registry=${NPM_REGISTRY}`;
+
 export const HELP_TEXT = `
   Weegloo MCP Plugin Installer
 
   Usage:
-    npx weegloo [options]
+    ${NPX_PREFIX} weegloo [options]
 
   Run with no options for the interactive installer. Any option below pre-fills
   its choice and skips that prompt; with -y (or in a non-TTY/piped environment)
