@@ -1,0 +1,22 @@
+---
+id: weegloo-web-hosting-rules
+type: rule
+title: Weegloo WebHosting Rules
+description: >
+  WebHosting deployment constraints. Before any deploy to Weegloo WebHosting,
+  invoke the weegloo-web-hosting skill for the full workflow.
+---
+
+rules:
+  - section: Critical constraints (always apply)
+    items:
+      - **Static hosting only.** No SSR, no server runtime. Frameworks must build to static export.
+      - **Max 100 files** in the deployed ZIP. Prefer CDN web fonts over self-hosted.
+      - **`index.html` at ZIP root.** Nested structures not allowed.
+      - **MCP tools only** for deployment. No deploy scripts, no direct API calls.
+      - **Subdomain is auto-chosen by the LLM — never ask the user.** Pick a **distinctive** subdomain that fits the service (not a plain common noun, which collides); the user can change it anytime later. After deploy, inform the user of the chosen subdomain and that it is changeable.
+      - **`CheckSubdomain` before `CreateWebHosting`.** Always. On collision, auto-pick another distinctive variant and re-check — do not ask the user.
+
+  - section: Full workflow
+    items:
+      - For the complete deploy flow (build → verify → ZIP → Upload → CreateWebHosting → poll), redeploy via UpdateOneWebHosting, and static export configuration, invoke the **`weegloo-web-hosting`** skill. This rule is a safety-net summary, not a substitute.

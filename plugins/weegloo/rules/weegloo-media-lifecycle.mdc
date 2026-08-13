@@ -1,0 +1,32 @@
+---
+id: weegloo-media-lifecycle
+type: rule
+title: Weegloo Media - sys.status, file processing, and safe use from Content
+description: >
+  Media sys.status and fields.file locale state; automatic processing and transition to Published;
+  wait before referencing from Content; unpublish before delete. CMA/MCP and app code.
+---
+
+rules:
+  - section: Status — what is deliverable, and how to move between states
+    items:
+      - **`sys.status`** is exactly one of **`Draft`** | **`Changed`** | **`Published`** | **`Archived`**. **Only `Published` is served by CDA**; everything else is CMA-only.
+      - **`Draft`**: never published. **`Published`**: live, with no pending edits.
+      - **`Changed`**: was published, and now carries **local edits the published copy does not show**. The published view stays stale until you **publish it again** (**`cma_PublishOneMedia`**) — do not leave a `Changed` asset assuming delivery picked the edits up.
+      - **`Archived`**: withdrawn from the active set and **not in delivery** (like `Draft` in that respect). It is **reversible** — unarchive to bring it back.
+
+  - section: `fields.file.{locale}.state` — per-locale processing
+    items:
+      - **`PENDING`** = queued, not started · **`PROCESSING`** = in progress · **`FAILED`** = errored, **not deliverable** until addressed.
+      - **`null`** = processing finished for that locale's file.
+      - ⚠️ **An absent `file` / locale bucket is NOT the same as "ready".** It means nothing is pending for that locale — which is also true when **no file was ever uploaded** for it. So absence alone does not prove a deliverable asset: check the state **of each locale you actually need**, and confirm a file exists there.
+
+  - section: After create the platform publishes it — wait, don't publish manually
+    items:
+      - Creating a **Media** automatically runs processing for every **`file`** locale entry, and on success Weegloo **moves `sys.status` to `Published` itself**. **Do not** treat **`cma_PublishOneMedia`** as the normal post-upload step — **poll until `Published`**. (Manual publish is for the other transitions, e.g. republishing a **`Changed`** asset.)
+      - **Before referencing a Media from Content** (**`Refer → Media`**) or assuming CDA-safe delivery, **wait until `sys.status === Published`** and until **`file.{locale}.state`** for every locale you need is not **`PENDING`** / **`PROCESSING`** / **`FAILED`**. This is **readiness gating**, not a human approval step.
+
+  - section: Delete order
+    items:
+      - **Delete requires the target to be `Draft` or `Archived`** — a `Published` or `Changed` Media must be **unpublished (or archived) first**. Delete does **not** unpublish for you.
+      - A Media whose file is **still processing** cannot be updated, patched, or deleted (busy) — wait for the state to settle.

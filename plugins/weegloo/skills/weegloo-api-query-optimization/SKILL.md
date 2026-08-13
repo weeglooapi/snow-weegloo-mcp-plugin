@@ -1,0 +1,266 @@
+---
+name: weegloo-api-query-optimization
+description: Weegloo list APIs - projection with select (include/exclude, object paths), list-as-single via sys.id, batch fetch with sys.id[in], prefetch sys.version for PATCH/PUT, and CMA Media mimeGroups filtering. Use to shrink payloads, avoid redundant reference expansion, and replace N single GETs with one list call. ALSO covers the master/detail pattern (lightweight list/sidebar + on-click single-Content detail fetch) and resolving a Refer→Media image/file field to a displayable URL — use when building a history list, gallery, inbox, or any list-then-open-item UI. ALSO covers Weegloo image processing: appending a preset style segment (`/style1`..`/style10`, max-dimension px, aspect-preserving WebP) to a Media file URL to get on-the-fly resized thumbnails/avatars without re-uploading — use when sizing images, building thumbnails/avatars, or optimizing image delivery. ALSO covers implementing a SEARCH feature: deciding in-memory vs server-side search (filtering the loaded array only works when it is the whole dataset) and full-text search over fields.* text via the Advanced Search header (X-Weegloo-Advanced-Search) — use when a UI has a search box over content/Media.
+---
+
+# Weegloo - query optimization for list APIs
+
+## When to use
+
+- Designing or reviewing **HTTP** calls to Weegloo **list** endpoints (CMA, CDA, or other documented list APIs) where **payload size**, **latency**, or **request count** matter.
+- Combining **`select`** with **`include`** (reference expansion) so expanded linked resources do not bloat the response.
+- Replacing **one GET-by-id** when you only need a **subset of fields**, or replacing **many GET-by-id** calls with **one filtered list**.
+- Loading **`sys.id`** and **`sys.version`** before **`PATCH`** or **`PUT`** without paying for a full **single-resource GET** on each id.
+
+Base URLs and API documentation: **`weegloo-api-endpoints`** (do not duplicate doc links here).
+
+---
+
+## 1. Projection: the `select` query parameter
+
+On **resource list** endpoints, use **`select`** to control which parts of each item appear in the JSON. Smaller responses mean **less network** and **lower parsing cost**.
+
+### Include mode (whitelist)
+
+Only the listed paths are returned:
+
+- Example: **`?select=sys.id,fields.title`**
+- Response items contain **`sys.id`** and **`fields.title`** (plus whatever the API always returns by contract-confirm in OpenAPI).
+
+### Exclude mode (blacklist)
+
+Prefix each path with **`-`** to **omit** that fragment:
+
+- Example: **`?select=-sys.id,-fields.title`**
+- Those fragments are **not** present in the response.
+
+### Include and exclude are mutually exclusive
+
+You **cannot** mix whitelist and blacklist in one **`select`**:
+
+- **Invalid:** **`?select=sys.id,-fields.title`**
+
+Choose **either** all-inclusive paths **or** all-negative paths for a single request.
+
+### Object-level paths
+
+You may select whole nested objects when the API allows it, for example:
+
+- **`?select=sys`** - restrict or focus the **`sys`** object as a unit (exact semantics per endpoint; see Swagger).
+
+### Interaction with `order`
+
+If the request uses **`order`**, **every sort key** must still be **present** in the projected representation. Sorting relies on those values; **`select`** must not strip them out.
+
+- **Include mode:** list every path that appears in **`order`** (or select a **parent** path that still contains those leaf values-confirm behavior in OpenAPI).
+- **Exclude mode:** do **not** prefix any **`order`** path with **`-`** (e.g. if **`?order=sys.id,fields.name`**, avoid **`-sys.id`** or **`-fields.name`** in **`select`**).
+
+Example: **`?order=sys.id,fields.name`** together with **`select`** → keep **`sys.id`** and **`fields.name`** reachable in the response.
+
+### Interaction with `include` (reference expansion)
+
+If the request uses **`?include=`** (or equivalent) so that **linked references** are **expanded** in the response, **`select`** becomes **especially important**: expansion can pull in **full linked documents** (e.g. a **Space**).
+
+When you **do not** need those linked details:
+
+- Prefer **`select`** to **drop** or **narrow** the corresponding branches (e.g. the **space** subtree) so that **expanded Space payloads** are not shipped unnecessarily.
+
+Otherwise, **`include`** may undo optimization by enlarging the body with nested resource graphs.
+
+### Filtering or sorting a flat `/contents` list by `fields.*` requires scoping the ContentType
+
+On the **flat `/contents` list** (**CDA** and **CMA**), to **filter** or **`order`** by any **`fields.*`** param you **must** scope the ContentType with **`sys.contentType.sys.id=<id>`**. A bare **`contentType=<id>`** is **NOT** enough for field queries — the server cannot resolve the field schema and rejects the request.
+
+- **Wrong:** `GET …/contents?contentType=<CT>&fields.status=active&order=-sys.createdAt`
+- **Correct:** `GET …/contents?sys.contentType.sys.id=<CT>&fields.status=active&order=-sys.createdAt`
+
+Apply this whenever a query touches **`fields.*`** (filter **or** sort key). It does **not** apply to the nested **`/content-types/{contentTypeId}/contents`** path, nor to **ACMA/ACDA** (which expose only the nested path) — there the ContentType is already fixed by the URL.
+
+---
+
+## 2. “Single resource” shape when projection is list-only
+
+**Projection (`select`) applies to list endpoints**, not to the dedicated **single-resource-by-id** GET in the usual sense.
+
+To get **one** item **with** projection:
+
+1. Call the **same list** endpoint used for collections.
+2. Filter to that id: **`?sys.id={resourceId}`** (exact parameter name and filter syntax per OpenAPI-**`sys.id`** is the typical filter for a single id).
+3. Add projection as needed, e.g. **`&select=sys.id`** (or any allowed **`select`** expression).
+
+Effectively this yields **one row** (or an empty list) with **controlled fields**, analogous to a **single fetch** optimized for payload.
+
+---
+
+## 3. Many ids: prefer one list + `sys.id[in]` over N GETs
+
+To load **several** resources by id:
+
+- **Avoid:** **`N`** separate **GET single-resource** requests (worst case **`N`** round trips and **`N`** full bodies).
+- **Prefer:** **one** **list** request with an **in** filter on **`sys.id`**, for example:
+
+  **`?sys.id[in]=1,2,3,4,5`**
+
+(Use the **documented** delimiter, parameter name, and encoding from OpenAPI-**`sys.id[in]`** is the usual pattern for “any of these ids”.)
+
+This is generally **better for latency** (fewer requests) and **network usage** (one response envelope, optional **`select`** to cap size).
+
+Combine with **`select`** from section 1 when you do not need full documents.
+
+---
+
+## 4. `sys.version` before `PATCH` or `PUT`
+
+Updates on **CMA** / **ACMA** (and similar) usually require the **current** **`sys.version`** so the server can enforce **optimistic concurrency** (e.g. via **`X-Weegloo-Version`** or the contract in OpenAPI-see **`weegloo-cma-json-patch`**). You only need **`sys.id`** and **`sys.version`** in the read phase; you do **not** need the **dedicated single-resource GET** for that.
+
+**Prefer the list endpoint** with a **tight `select`:**
+
+| Goal | Suggested query (illustrative) |
+|------|--------------------------------|
+| **One** resource | **`?sys.id={resourceId}&select=sys.id,sys.version`** |
+| **Several** resources (bulk follow-up patches) | **`?sys.id[in]=1,2,3,4,5&select=sys.id,sys.version`** |
+
+This matches the patterns in **§2** and **§3**: list + filter + projection. Response **`items`** give you each id with its **current version** in a **small** payload-**fewer round trips** and **less data** than **`N`** full **GET-by-id** responses.
+
+Filter syntax (**`sys.id`**, **`sys.id[in]`**, delimiters) is defined per API in **OpenAPI**.
+
+---
+
+## 5. Media list: filter by logical type (`mimeGroups`)
+
+On **CMA** **`GET .../spaces/{spaceId}/medias`**, add **`fields.file.{locale}.mimeGroups={MimeGroup}`** so the API returns only assets in that **category** (e.g. **`Image`**, **`Video`**, **`Audio`**, **`Code`**)-smaller **`items`** than an unfiltered list. Use the same **`{locale}`** you use for **`fields.file`** (often the space default locale).
+
+**Allowed `MimeGroup` values** and full URL examples: **`weegloo-api-endpoints`** rule → *CMA Media list - filter by `mimeGroups`*.
+
+---
+
+## 6. Master/detail UIs: lightweight list + on-select detail fetch (do NOT render a detail from the list)
+
+§2–§3 optimize **bulk** loading (one list instead of many GETs). They do **NOT** mean "render a
+detail or image view straight from the list response." A **list/sidebar → open an item** UI
+(history list, gallery, inbox, search results → item page) uses the **opposite** split, and getting
+this wrong is a common mistake:
+
+- **List (sidebar): fetch a lightweight projection per row** — `sys.id` plus the human-readable
+  **label field you will display** (e.g. `fields.prompt`, `fields.title`). Use `select` to keep rows
+  small, and **always project and render a meaningful label**, never just an id or a thumbnail. A
+  sidebar/list that shows no title/prompt text is a defect, not an optimization.
+- **Detail (on click): fetch that ONE Content by id, lazily.** Hit the single-Content endpoint for
+  the selected item — `…/content-types/{contentTypeId}/contents/{contentId}` (on ACMA/ACDA always
+  nested under the ContentType; see **`weegloo-api-endpoints`**). This lazy by-id GET is **correct
+  and expected**. The "avoid N GETs" guidance in §3 is about loading a *batch* up front — it is
+  **not** a reason to skip the detail fetch for the *one* item the user actually opened, nor to try
+  to cram every row's full detail into the initial list call.
+
+### Content never embeds a Media — it holds a `Refer` stub (resolve it)
+
+**A Content does not contain the Media (or any other linked resource) inline. A reference field
+always holds only a stub**, never the full document:
+
+```json
+{ "sys": { "id": "abc", "type": "Refer", "targetType": "Media" } }
+```
+
+So `fields.image1`, `fields.file`, an author `Refer → User`, a `Refer → Content`, etc. give you an
+**id + `targetType`**, not the asset's URL or the linked document's fields. Two ways to get the real
+resource — **do not** assume it is already inside the Content:
+
+1. **Follow the id.** Read `…sys.id` from the Refer and fetch the target directly, e.g.
+   `GET /v1/spaces/{spaceId}/medias/{id}` for a `Refer → Media`.
+2. **Expand on read with `?include=1`.** The response then carries every referenced resource in a
+   **sibling, singular `include` object keyed by PascalCase `targetType`** — `include.Media`,
+   `include.Content`, `include.Space`, `include.Organization`, `include.User`, … . Resolve a field's
+   `sys.id` against the matching `include.<Type>` array by id. (Shape detail + a both-shapes accessor:
+   **`weegloo-default-locale`**.)
+
+### Rendering a referenced Media (image / file fields)
+
+A field that points at an asset (e.g. `fields.image1`…`fields.image4`, `fields.file`) is a
+**Refer → Media**, **not** a ready-to-use URL string. To show it you must **resolve the Media to its
+file URL** (per the two paths above):
+
+- On the **detail** fetch, expand the reference (`?include=1`) — or follow up with a Media fetch —
+  and read the file URL from the **Media's** `fields.file.{locale}` per-locale bucket (default-locale
+  rules: **`weegloo-default-locale`**). Confirm the Media is deliverable first
+  (**`weegloo-media-lifecycle`**).
+- **Do NOT assume the list response already carries usable image URLs.** List-level expansion is not
+  guaranteed to resolve every Refer→Media into a deliverable URL, and pulling all rows' media up
+  front defeats the lightweight-list goal above. The reliable place to read image/file fields for
+  rendering is the **detail fetch of the selected item** — exactly the per-item
+  `…/contents/{contentId}` call, reading `fields.image1..N` → Media → file URL.
+
+### Image processing — on-the-fly resize via `/{styleN}`
+
+Once you have an image Media's file URL, **append a preset style name as a path segment** to get a
+**resized, WebP-converted** copy generated on the fly. The original file stays untouched — you do
+**not** re-upload or store a separate thumbnail.
+
+```
+<file URL>/style3        e.g.  https://…/tumbler.png/style3   → 128×128 WebP
+```
+
+Ten presets; each value is the **max dimension** in px and the **original aspect ratio is
+preserved** (the image is scaled so its longest side fits the box). Output is always **WebP at 100%
+quality**:
+
+| style | px | | style | px |
+|---|---|---|---|---|
+| `style1` | 32  | | `style6`  | 320  |
+| `style2` | 64  | | `style7`  | 480  |
+| `style3` | 128 | | `style8`  | 640  |
+| `style4` | 192 | | `style9`  | 960  |
+| `style5` | 256 | | `style10` | 1024 |
+
+There are **only these presets** — no arbitrary `width`/`height`/`quality`/`format` parameters.
+Pick the smallest style that covers the rendered size (e.g. avatars → `style1`/`style2`, list
+thumbnails → `style3`, hero → `style9`/`style10`); requesting a larger style than you display just
+wastes bytes. Use the **plain file URL** (no suffix) only when you genuinely need the untouched
+original (download, exact-fidelity, or a non-image asset).
+
+**Availability:** the styled URL works once the Media is **Published**, which a Media reaches
+**automatically** after its upload finishes processing — there is **no separate publish step** for
+Media (unlike Content). So a normally-uploaded image just works. The only cases where it is not yet
+deliverable: upload processing hasn't completed, or the upload opted out of auto-publish with
+**`X-Weegloo-Ignore-Publish: true`** (see `weegloo-upload-api`).
+
+---
+
+## 7. Search: pick WHERE you search, and use Advanced Search for `fields.*` text
+
+When a UI has a search box, first decide the **locus** of the search — getting this wrong is a
+common, silent bug:
+
+- **In-memory filtering is correct ONLY when the array you filter already holds the ENTIRE dataset**
+  — a small, fully-loaded set (e.g. one user's handful of items fetched in full). Filtering
+  `items.filter(i => i.title.includes(q))` over a **paginated or partial** list searches **only the
+  rows currently loaded** and silently misses everything not yet fetched. If the list is large,
+  paged, or of **unknown size** (e.g. *all* Media in a Space — the visible thumbnails are not the
+  whole set), in-memory search is **wrong**.
+- **Server-side search hits the list API with filter params** so the **whole** dataset is searched,
+  then page the results with `links.next` (`weegloo-list-pagination`). What is loaded on screen is
+  not the dataset.
+
+Content data lives in **`fields.*`**, not `sys.*` — search the right place, the right way:
+
+- **Filtering `fields.*` needs the locale segment** (`fields.title.en-US[...]`) and, on the flat
+  Content list, the **ContentType scope** `sys.contentType.sys.id=<id>` (see the Filter Parameters
+  rule). `sys.*` filters (`sys.id`, `sys.createdAt`) need neither.
+- **Plain `eq` on a text field is EXACT match.** For real text search — partial + fuzzy "contains"
+  matching, plus the `regex` and geo `near`/`within` operators — send the **Advanced Search** header
+  **`X-Weegloo-Advanced-Search: true`**; then `eq` on a full-text-enabled **LongText** field matches
+  items that *contain* the term. Without the header you get only exact equality, so a substring query
+  returns nothing — do **not** react to that by falling back to filtering in memory.
+- **RichText and Json fields are not searchable.** If a field must be searched, model it as
+  ShortText/LongText with the right search setting **at design time** — search is decided when you
+  model the data, not bolted on after (`weegloo-create-content-type`).
+
+Exact operator list, per-field-type support, and request format are canonical at the query-parameters
+reference (linked from `weegloo-api-endpoints`). Don't guess operators.
+
+---
+
+## Related
+
+- **Endpoints and headers:** **`weegloo-api-endpoints`** rule.
+- **Pagination:** **`weegloo-list-pagination`** skill (`links.next`, first-page params).
+- **PATCH/PUT, JSON Patch, version headers:** **`weegloo-cma-json-patch`** skill.
