@@ -2,7 +2,7 @@
   "name": "weegloo-plugins",
   "owner": {
     "name": "Weegloo",
-    "email": "support@weegloo.com"
+    "email": "dl_sn_weegloo@snowcorp.com"
   },
   "metadata": {
     "description": "Weegloo Claude Code plugins: MCP servers for the Weegloo CMA/CDA and companion skills."

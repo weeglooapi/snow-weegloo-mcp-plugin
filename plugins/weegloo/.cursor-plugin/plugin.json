@@ -5,7 +5,7 @@
   "description": "Weegloo MCP server and companion rules/skills. Create and manage content, WebHosting, and more through natural language.",
   "author": {
     "name": "Weegloo",
-    "email": "support@weegloo.com"
+    "email": "dl_sn_weegloo@snowcorp.com"
   },
   "homepage": "https://weegloo.navercorp.com",
   "repository": "https://github.com/weeglooapi/snow-weegloo-mcp-plugin",
