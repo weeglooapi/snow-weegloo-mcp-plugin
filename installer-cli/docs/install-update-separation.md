@@ -41,7 +41,7 @@ npx -y --registry=https://artifactory.navercorp.com/artifactory/api/npm/npm-loca
 | 신규 판별 | 기록에 **카탈로그(`available*`) 스냅샷** 추가 | "선택한 것"만으로는 (a) 진짜 신규 vs (b) 사용자가 뺀 것을 **구분 불가** — 매니페스트에 항목별 추가시점 메타데이터 없음(항목=id+content뿐), 버전은 불투명 해시라 순서 비교 불가. "그때 제공됐던 목록"이 유일한 판별 키 |
 | 설치 동작 | **불변** (비대화=전체, 대화형=체크박스) | 신규 설치 UX 유지. 단 기록만 확장(`available*`, `ref`) |
 | MCP | **안 건드림** (`--update`는 skills/rules만) | 원격 `weegloo` MCP는 항상 최신(재설치 무의미), `weegloo-upload`는 npx라 실행 시 최신 → 토큰 불필요, 완전 무인 가능 |
-| 코어 룰 | **`weegloo-version` + `weegloo-terms-consent` 강제** (선행 태스크) | `weegloo-version`: 자기참조 — 빠지면 업데이트 노티 자체가 사라져 복구 경로가 구조적으로 죽음. `weegloo-terms-consent`: 약관 게이트가 클라이언트(룰) 측 집행이라 빠지면 게이트 소멸 — 운영 결정. `weegloo-global-rules`는 구조적 필연이 없어(품질 선호일 뿐) **강제하지 않음** |
+| 코어 룰 | **`weegloo-version` 강제** (선행 태스크) | `weegloo-version`: 자기참조 — 빠지면 업데이트 노티 자체가 사라져 복구 경로가 구조적으로 죽음. `weegloo-global-rules`는 구조적 필연이 없어(품질 선호일 뿐) **강제하지 않음** |
 | 마이그레이션 | 기존 사용자 **전체설치 1회 감수** | 기존 룰에 박힌 옛 커맨드(install 폼)가 새 인스톨러로 1회 전체 설치 → 선택 리셋. 이를 막으려면 비대화 install 경로도 수정해야 하나 범위 대비 이득이 작아 기각 |
 
 ## 4. 데이터 모델 — per-agent 분리
@@ -234,7 +234,7 @@ Antigravity가 workspace 룰 위치로 `.agents/rules/*.md` 를 공식 지원함
 
 ### PR-0 (선행) — 코어 룰 강제
 
-- `CORE_RULE_IDS = ['weegloo-version', 'weegloo-terms-consent']` 상수 (self-update.js) —
+- `CORE_RULE_IDS = ['weegloo-version']` 상수 (self-update.js) —
   PR-2의 `add ∪ CORE`에서 재사용.
 - 대화형 설치: 룰 체크박스(`index.js:461`)에서 코어를 **선택지에서 제외 + 항상 설치 목록에 합류**
   ("필수 룰 2개는 항상 설치됩니다" 안내 1줄). inquirer `disabled`는 선택 불가=제외 방향이라 부적합.

@@ -121,7 +121,7 @@ This is the command the installed `weegloo-version` rule shows when a newer vers
 
 - **keeps your skill/rule selection** — a partial install stays partial. A hand-deleted skill/rule is treated as drift and restored; deselecting happens by re-running the install picker.
 - **auto-adds genuinely new items** — things that did not exist in the catalog when you last installed. Items you deliberately deselected stay out.
-- **prunes upstream-deleted items**, and always restores the core rules (`weegloo-version`, `weegloo-terms-consent`).
+- **prunes upstream-deleted items**, and always restores the core rule (`weegloo-version`).
 - **stays on your branch** — read from the install's stamp (`ref`), not defaulted to `latest`. Pass `--branch` only to deliberately switch branches.
 - **never touches MCP config**, so no token is needed and it runs unattended (no `--yes`). The one interactive question is the rare shared-file conflict when multiple agents in one project sit on different branches/origins.
 - reapplies the [origins mapping](#origins-mapping-staging--enterprise) recorded at install time. `--update --origins` is rejected — changing environments is a reinstall.
@@ -214,7 +214,7 @@ Android Studio writes **both** MCP servers into `mcp.json` ([docs](https://devel
 
 ## Available Skills and Rules
 
-The full, current catalog (20+ skills, 7 rules) is shown in the interactive picker and lives in [`plugins/weegloo/`](https://github.com/weeglooapi/snow-weegloo-mcp-plugin/tree/latest/plugins/weegloo) — it changes with every release, so it is not duplicated here. Two rules are core and always installed: `weegloo-version` (the update notifier) and `weegloo-terms-consent` (the terms gate).
+The full, current catalog (20+ skills, 7 rules) is shown in the interactive picker and lives in [`plugins/weegloo/`](https://github.com/weeglooapi/snow-weegloo-mcp-plugin/tree/latest/plugins/weegloo) — it changes with every release, so it is not duplicated here. One rule is core and always installed: `weegloo-version` (the update notifier).
 
 ## Requirements
 

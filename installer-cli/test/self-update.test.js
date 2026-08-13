@@ -31,8 +31,8 @@ const RULE = {
 };
 const OTHER = { id: 'weegloo-global-rules', content: 'leave {{WEEGLOO_VERSION_URL}} alone' };
 
-test('CORE_RULE_IDS forces exactly the update notifier and the terms gate', () => {
-  assert.deepEqual(CORE_RULE_IDS, ['weegloo-version', 'weegloo-terms-consent']);
+test('CORE_RULE_IDS forces exactly the update notifier', () => {
+  assert.deepEqual(CORE_RULE_IDS, ['weegloo-version']);
 });
 
 test('partitionCoreRules splits core vs optional, preserving manifest order', () => {
@@ -40,16 +40,15 @@ test('partitionCoreRules splits core vs optional, preserving manifest order', ()
     { id: 'weegloo-global-rules', content: 'a' },
     { id: 'weegloo-version', content: 'b' },
     { id: 'weegloo-api-endpoints', content: 'c' },
-    { id: 'weegloo-terms-consent', content: 'd' },
   ];
   const { core, optional } = partitionCoreRules(manifest);
-  assert.deepEqual(core.map((r) => r.id), ['weegloo-version', 'weegloo-terms-consent']);
+  assert.deepEqual(core.map((r) => r.id), ['weegloo-version']);
   assert.deepEqual(optional.map((r) => r.id), ['weegloo-global-rules', 'weegloo-api-endpoints']);
 });
 
 test('partitionCoreRules invents nothing when a core rule is absent from the manifest (old branch)', () => {
   const manifest = [
-    { id: 'weegloo-version', content: 'b' }, // terms-consent predates this branch
+    { id: 'weegloo-version', content: 'b' },
     { id: 'weegloo-global-rules', content: 'a' },
   ];
   const { core, optional } = partitionCoreRules(manifest);
@@ -58,12 +57,9 @@ test('partitionCoreRules invents nothing when a core rule is absent from the man
 });
 
 test('partitionCoreRules on an all-core manifest leaves the picker list empty (checkbox must be skipped)', () => {
-  const manifest = [
-    { id: 'weegloo-version', content: 'b' },
-    { id: 'weegloo-terms-consent', content: 'd' },
-  ];
+  const manifest = [{ id: 'weegloo-version', content: 'b' }];
   const { core, optional } = partitionCoreRules(manifest);
-  assert.equal(core.length, 2);
+  assert.equal(core.length, 1);
   assert.deepEqual(optional, []);
 });
 

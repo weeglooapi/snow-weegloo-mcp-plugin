@@ -16,9 +16,6 @@
  */
 import fs from 'node:fs';
 
-/** cma 매핑 시 카탈로그에서 제외되는 약관 게이트 룰 (docs/origins-mapping.md §6). */
-export const TERMS_CONSENT_RULE_ID = 'weegloo-terms-consent';
-
 /**
  * 매핑 가능한 서비스 8개: 키는 짧은 서비스 이름(사람이 쓰는 입력 형식 — 소스 origin은 고정이라
  * 전체 URL 키는 순수 중복 타이핑), 값은 그 서비스의 weegloo 소스 origin. 이 밖의 키는
@@ -175,19 +172,6 @@ export function applyOriginsToResources(resources, origins) {
     })),
     rules: resources.rules.map((rule) => ({ ...rule, content: map(rule.content) })),
   };
-}
-
-/**
- * origins 매핑이 하나라도 있으면 ⇒ terms-consent 룰을 카탈로그에서 제거
- * (docs/origins-mapping.md §6). 약관 게이트는 weegloo가 운영하는 표준 스택의 것 —
- * origins를 쓰는 설치(스테이징/B2B 납품)는 그 바깥이라 룰 자체가 성립하지 않는다.
- * (초안은 cma 키가 있을 때만 제외였으나 "origin 변경 = 사실상 B2B뿐"이라 조건 없이 단순화.)
- * 카탈로그에서 빼면: install 체크박스·코어 강제(partitionCoreRules는 매니페스트 ∩ 이라
- * 자동 해제)·update의 add/prune(기존 집합 연산)이 전부 자연히 따라온다.
- */
-export function applyTermsExclusion(resources, origins) {
-  if (!origins) return resources;
-  return { ...resources, rules: resources.rules.filter((r) => r.id !== TERMS_CONSENT_RULE_ID) };
 }
 
 /** 두 매핑(null 허용)의 동등 비교 — 공유 스토어 충돌 감지용. */

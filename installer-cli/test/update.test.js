@@ -62,13 +62,15 @@ test('planUpdate: empty prev catalog (legacy record) → no auto-add this cycle'
 test('planUpdate: core rules are always re-added, even if absent from the selection', () => {
   const plan = planUpdate({
     catalogSkillIds: [],
-    catalogRuleIds: ['weegloo-api-endpoints', 'weegloo-version', 'weegloo-terms-consent'],
+    catalogRuleIds: ['weegloo-api-endpoints', 'weegloo-version', 'weegloo-global-rules'],
     selectedSkillIds: [],
-    selectedRuleIds: ['weegloo-api-endpoints'], // user hand-deleted the core rules
+    // weegloo-version was hand-deleted (core → restored); weegloo-global-rules was deliberately
+    // deselected in the picker (non-core → stays out). Only one of the two comes back.
+    selectedRuleIds: ['weegloo-api-endpoints'],
     prevAvailableSkills: [],
-    prevAvailableRules: ['weegloo-api-endpoints', 'weegloo-version', 'weegloo-terms-consent'],
+    prevAvailableRules: ['weegloo-api-endpoints', 'weegloo-version', 'weegloo-global-rules'],
   });
-  assert.deepEqual(plan.addRuleIds, ['weegloo-api-endpoints', 'weegloo-version', 'weegloo-terms-consent']);
+  assert.deepEqual(plan.addRuleIds, ['weegloo-api-endpoints', 'weegloo-version']);
 });
 
 test('planUpdate: a foreign weegloo-* id in the disk-fallback selection is never in the add set', () => {
@@ -137,7 +139,7 @@ const MANIFEST = {
   ],
   rules: [
     { id: 'weegloo-version', content: 'version-rule {{WEEGLOO_VERSION_URL}} {{WEEGLOO_STAMP_PATH}} {{WEEGLOO_UPDATE_COMMAND}} {{WEEGLOO_CHECK_INTERVAL_HOURS}}' },
-    { id: 'weegloo-terms-consent', content: 'terms-rule v2' },
+    { id: 'weegloo-media-lifecycle', content: 'media-rule v2' },
     { id: 'weegloo-global-rules', content: 'global-rule v2' },
   ],
 };
@@ -195,12 +197,12 @@ test('runUpdate: keeps selection, refreshes content, auto-adds new, prunes upstr
     // v1 install: user selected a + gone (gone is deleted upstream in v2); catalog knew a,b,gone.
     seedClaude({
       skills: ['weegloo-a', 'weegloo-gone'],
-      rules: ['weegloo-version', 'weegloo-terms-consent'],
+      rules: ['weegloo-version', 'weegloo-media-lifecycle'],
       record: {
         skills: ['weegloo-a', 'weegloo-gone'],
-        rules: ['weegloo-version', 'weegloo-terms-consent'],
+        rules: ['weegloo-version', 'weegloo-media-lifecycle'],
         availableSkills: ['weegloo-a', 'weegloo-b', 'weegloo-gone'],
-        availableRules: ['weegloo-version', 'weegloo-terms-consent', 'weegloo-global-rules'],
+        availableRules: ['weegloo-version', 'weegloo-media-lifecycle', 'weegloo-global-rules'],
       },
       stamp: { last_check: '2026-01-01T00:00:00', version: 'v1', ref: 'develop' },
     });
@@ -247,12 +249,12 @@ test('runUpdate: core rules are restored even after the user hand-deleted them',
         skills: ['weegloo-a'],
         rules: ['weegloo-version'],
         availableSkills: ['weegloo-a'],
-        availableRules: ['weegloo-version', 'weegloo-terms-consent', 'weegloo-global-rules'],
+        availableRules: ['weegloo-version', 'weegloo-media-lifecycle', 'weegloo-global-rules'],
       },
       stamp: { last_check: 'x', version: 'v1', ref: 'latest' },
     });
     // one surviving weegloo rule so the rules kind counts as installed
-    fs.writeFileSync('.claude/rules/weegloo-terms-consent.md', 'terms v1', 'utf-8');
+    fs.writeFileSync('.claude/rules/weegloo-media-lifecycle.md', 'media v1', 'utf-8');
 
     await runUpdate(
       { update: true, agent: 'claude', scope: 'project', nonInteractive: true },
@@ -260,7 +262,7 @@ test('runUpdate: core rules are restored even after the user hand-deleted them',
     );
 
     assert.ok(fs.existsSync('.claude/rules/weegloo-version.md'), 'deleted core rule came back');
-    assert.ok(fs.existsSync('.claude/rules/weegloo-terms-consent.md'));
+    assert.ok(fs.existsSync('.claude/rules/weegloo-media-lifecycle.md'));
   });
 });
 
@@ -473,7 +475,7 @@ test('runUpdate: a hand-deleted skill is RESTORED from the record (drift repair,
         skills: ['weegloo-a'],
         rules: ['weegloo-version'],
         availableSkills: ['weegloo-a', 'weegloo-b', 'weegloo-brandnew'],
-        availableRules: ['weegloo-version', 'weegloo-terms-consent', 'weegloo-global-rules'],
+        availableRules: ['weegloo-version', 'weegloo-media-lifecycle', 'weegloo-global-rules'],
       },
       stamp: { last_check: 'x', version: 'v1', ref: 'latest' },
     });
@@ -605,7 +607,7 @@ test('runUpdate: antigravity project — pre-migration markers are detected, rul
         skills: ['weegloo-a'],
         rules: ['weegloo-version'],
         availableSkills: ['weegloo-a', 'weegloo-b', 'weegloo-brandnew'],
-        availableRules: ['weegloo-version', 'weegloo-terms-consent', 'weegloo-global-rules'],
+        availableRules: ['weegloo-version', 'weegloo-media-lifecycle', 'weegloo-global-rules'],
       }),
       'utf-8'
     );
@@ -647,7 +649,7 @@ test('runUpdate: antigravity project rules are no longer a shared store — no c
         skills: [],
         rules: ['weegloo-version'],
         availableSkills: [],
-        availableRules: ['weegloo-version', 'weegloo-terms-consent', 'weegloo-global-rules'],
+        availableRules: ['weegloo-version', 'weegloo-media-lifecycle', 'weegloo-global-rules'],
       }),
       'utf-8'
     );
@@ -820,7 +822,7 @@ test('runUpdate: pruning a shared skill NO sharer claims really removes it (last
   });
 });
 
-// ── origins 매핑 (기록 재적용 · terms 제외 · 공유 스토어 origins 충돌) ──────
+// ── origins 매핑 (기록 재적용 · 상류 삭제 prune · 공유 스토어 origins 충돌) ──────
 
 const ACME_ORIGINS = { cma: 'https://cma.acme.com', ai: 'https://ai.acme.com' };
 
@@ -831,7 +833,6 @@ const ORIGINS_MANIFEST = {
   ],
   rules: [
     { id: 'weegloo-version', content: 'GET {{WEEGLOO_VERSION_URL}} stamp {{WEEGLOO_STAMP_PATH}} run {{WEEGLOO_UPDATE_COMMAND}} every {{WEEGLOO_CHECK_INTERVAL_HOURS}}h' },
-    { id: 'weegloo-terms-consent', content: 'terms at https://cma.sn-weegloo.com/v1/policy/terms' },
     { id: 'weegloo-global-rules', content: 'use cma.sn-weegloo.com for management' },
   ],
 };
@@ -868,17 +869,18 @@ test('runUpdate: recorded origins mapping is reapplied — content, baked versio
   });
 });
 
-test('runUpdate: origins-mapped record → terms-consent leaves the catalog, existing rule file pruned, core forcing skips it', async () => {
+test('runUpdate: a rule deleted upstream is pruned from disk and from the record', async () => {
   await inTmpProject(async () => {
     seedClaude({
       skills: ['weegloo-a'],
-      rules: ['weegloo-version', 'weegloo-terms-consent'], // terms가 디스크에 깔려 있는 상태
+      // 디스크·기록에는 있지만 매니페스트(카탈로그)에는 이미 없는 룰.
+      rules: ['weegloo-version', 'weegloo-media-lifecycle'],
       record: {
         skills: ['weegloo-a'],
-        rules: ['weegloo-version', 'weegloo-terms-consent'],
+        rules: ['weegloo-version', 'weegloo-media-lifecycle'],
         availableSkills: ['weegloo-a'],
-        availableRules: ['weegloo-version', 'weegloo-terms-consent', 'weegloo-global-rules'],
-        origins: ACME_ORIGINS, // 매핑 존재 → terms 제외 발동
+        availableRules: ['weegloo-version', 'weegloo-media-lifecycle', 'weegloo-global-rules'],
+        origins: ACME_ORIGINS,
       },
       stamp: { last_check: 'x', version: 'v1', ref: 'latest' },
     });
@@ -888,11 +890,11 @@ test('runUpdate: origins-mapped record → terms-consent leaves the catalog, exi
       { loadResourcesFn: async () => ORIGINS_MANIFEST, ...quiet }
     );
 
-    assert.equal(fs.existsSync('.claude/rules/weegloo-terms-consent.md'), false, '카탈로그 이탈 → prune');
-    assert.ok(fs.existsSync('.claude/rules/weegloo-version.md'), '다른 코어 룰은 정상 유지');
+    assert.equal(fs.existsSync('.claude/rules/weegloo-media-lifecycle.md'), false, '카탈로그 이탈 → prune');
+    assert.ok(fs.existsSync('.claude/rules/weegloo-version.md'), '남은 코어 룰은 정상 유지');
     const rec = readInstalledRecord('.weegloo/claude/installed.json');
-    assert.ok(!rec.rules.includes('weegloo-terms-consent'));
-    assert.ok(!rec.availableRules.includes('weegloo-terms-consent'), '카탈로그 스냅샷에서도 제외');
+    assert.ok(!rec.rules.includes('weegloo-media-lifecycle'));
+    assert.ok(!rec.availableRules.includes('weegloo-media-lifecycle'), '카탈로그 스냅샷에서도 제외');
   });
 });
 

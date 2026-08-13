@@ -30,26 +30,22 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { VERSION_URL } from './github.js';
 import { NPX_PREFIX } from './cli.js';
-import { applyOriginMapping, TERMS_CONSENT_RULE_ID } from './origins.js';
+import { applyOriginMapping } from './origins.js';
 import { listWeeglooRuleFiles } from './io.js';
 
 export const SELF_UPDATE_RULE_ID = 'weegloo-version';
 
 /**
  * Rules that must ALWAYS be installed — excluded from the interactive picker and merged into
- * every install (the update flow re-adds them too). Two ids, two distinct reasons:
+ * every install (the update flow re-adds them too). One id, one reason:
  *  - weegloo-version: self-referential — this rule IS the update notifier, so deselecting it
  *    would permanently sever the update path (nothing left to ever prompt a reinstall).
- *  - weegloo-terms-consent: the terms gate is enforced client-side by this rule, so removing
- *    it removes the gate itself (an operator/legal requirement, not a user preference).
  * weegloo-global-rules is deliberately NOT here: without it the agent merely handles Weegloo
  * less well — nothing structural breaks — so opting out stays a valid power-user choice.
  *
- * NOTE: with ANY origins mapping, the terms rule is removed from the CATALOG
- * upstream of every consumer (origins.js applyTermsExclusion), so this list needs no condition —
- * core forcing is always "∩ manifest", and a rule absent from the manifest is never forced.
+ * Core forcing is always "∩ manifest", so a rule absent from the manifest is never forced.
  */
-export const CORE_RULE_IDS = [SELF_UPDATE_RULE_ID, TERMS_CONSENT_RULE_ID];
+export const CORE_RULE_IDS = [SELF_UPDATE_RULE_ID];
 
 /**
  * Splits a manifest rule list into forced-core vs user-selectable, preserving manifest order.

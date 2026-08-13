@@ -15,7 +15,7 @@
  *    absent from BOTH the selection and prevAvailable was never offered before (add it); present
  *    in prevAvailable but not selected means the user deselected it (respect that);
  *  - upstream-deleted items are pruned via the record diff in syncInstalledRecord;
- *  - core rules are always (re)added — the update notifier and the terms gate must survive;
+ *  - core rules are always (re)added — the update notifier must survive;
  *  - MCP config is never touched (remote server is always current), so no token is needed;
  *  - the origins mapping recorded at install time is reapplied verbatim (docs/origins-mapping.md §5)
  *    — never taken from a flag (cli.js rejects --update --origins: environment changes reinstall);
@@ -68,7 +68,7 @@ import {
   toAntigravityRuleContent,
   RULE_LOADING_ID,
 } from './antigravity.js';
-import { normalizeOrigins, applyOriginsToResources, applyTermsExclusion, originsEqual } from './origins.js';
+import { normalizeOrigins, applyOriginsToResources, originsEqual } from './origins.js';
 
 /**
  * Where each agent keeps its weegloo artifacts, plus which stores are SHARED with other agents
@@ -316,9 +316,9 @@ export async function runUpdate(config, deps = {}) {
   }
   spinner.succeed(`  Manifest loaded  ${chalk.dim(`${REPO} @ ${ref}${resources.version ? ` (version ${resources.version})` : ''}`)}`);
 
-  // Same mapped view as an install: content rewritten in memory, terms-consent dropped from
+  // Same mapped view as an install: content rewritten in memory, dropped from
   // the catalog when cma is mapped (its prune then falls out of the set arithmetic below).
-  resources = applyTermsExclusion(applyOriginsToResources(resources, origins), origins);
+  resources = applyOriginsToResources(resources, origins);
 
   const catalogSkillIds = resources.skills.map((s) => s.id);
   const catalogRuleIds = resources.rules.map((r) => r.id);

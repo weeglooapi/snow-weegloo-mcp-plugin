@@ -6,7 +6,7 @@ import { orderBranchesForPicker } from './versions.js';
 import { parseCliArgs, resolveConfig, HELP_TEXT } from './cli.js';
 import { partitionCoreRules } from './self-update.js';
 import { runUpdate } from './update.js';
-import { loadOrigins, applyOriginsToResources, applyTermsExclusion, applyOriginMapping } from './origins.js';
+import { loadOrigins, applyOriginsToResources, applyOriginMapping } from './origins.js';
 import { installCursor } from './cursor.js';
 import { installClaude } from './claude.js';
 import { installAntigravity } from './antigravity.js';
@@ -367,10 +367,8 @@ async function main() {
 
   // Origins mapping: rewrite weegloo origins across ALL fetched content (skill files, rule text,
   // MCP URLs) before anything downstream reads it — selection lists, catalogs, installers all
-  // see the mapped view. cma mapped ⇒ the terms-consent rule leaves the CATALOG here, which
-  // cascades everywhere (picker, core forcing, record, future update pruning) with no further
-  // conditionals. No mapping ⇒ byte-identical passthrough.
-  resources = applyTermsExclusion(applyOriginsToResources(resources, origins), origins);
+  // see the mapped view. No mapping ⇒ byte-identical passthrough.
+  resources = applyOriginsToResources(resources, origins);
   const mcp = resources.mcp;
 
   if (installMcp) {
@@ -498,7 +496,7 @@ async function main() {
       if (config.nonInteractive) {
         rules = resources.rules;
       } else {
-        // Core rules (the update notifier + the terms gate, see CORE_RULE_IDS) appear in the
+        // Core rules (the update notifier, see CORE_RULE_IDS) appear in the
         // picker but greyed-out and un-toggleable. inquirer EXCLUDES disabled choices from the
         // returned selection regardless of `checked`, so they are unioned back in below.
         const { core, optional } = partitionCoreRules(resources.rules);

@@ -10,9 +10,7 @@ import {
   loadOrigins,
   applyOriginMapping,
   applyOriginsToResources,
-  applyTermsExclusion,
   originsEqual,
-  TERMS_CONSENT_RULE_ID,
 } from '../src/origins.js';
 import { applySelfUpdateTemplate, SELF_UPDATE_RULE_ID } from '../src/self-update.js';
 import { VERSION_URL } from '../src/github.js';
@@ -128,7 +126,7 @@ test('applyOriginMapping: null mapping is a byte-identical passthrough', () => {
   assert.equal(applyOriginMapping(input, null), input);
 });
 
-// ── applyOriginsToResources / applyTermsExclusion ───────────────────────────────
+// ── applyOriginsToResources ─────────────────────────────────────────────────────
 
 const RESOURCES = {
   version: 'v9',
@@ -136,7 +134,7 @@ const RESOURCES = {
   skills: [{ id: 'weegloo-a', files: { 'SKILL.md': 'call https://cma.sn-weegloo.com/v1/x' } }],
   rules: [
     { id: 'weegloo-global-rules', content: 'use cma.sn-weegloo.com for management' },
-    { id: TERMS_CONSENT_RULE_ID, content: 'terms at https://cma.sn-weegloo.com/v1/policy/terms' },
+    { id: 'weegloo-api-endpoints', content: 'upload at https://upload.sn-weegloo.com/v1' },
   ],
 };
 
@@ -150,15 +148,6 @@ test('applyOriginsToResources: skills + rules + MCP URLs all rewritten; original
   // 원본 불변 (매번 원본에서 새로 치환 — 이중 치환 없음의 전제)
   assert.equal(RESOURCES.skills[0].files['SKILL.md'], 'call https://cma.sn-weegloo.com/v1/x');
   assert.equal(RESOURCES.mcp.weeglooUrl, 'https://ai.sn-weegloo.com/mcp');
-});
-
-test('applyTermsExclusion: ANY origins mapping → terms-consent leaves the catalog; no mapping → untouched', () => {
-  // origins 사용 자체가 표준 스택 바깥(스테이징/B2B) — cma 여부와 무관하게 제외 (조건 단순화).
-  const excluded = applyTermsExclusion(RESOURCES, ACME);
-  assert.deepEqual(excluded.rules.map((r) => r.id), ['weegloo-global-rules']);
-  const cdaOnly = applyTermsExclusion(RESOURCES, { cda: 'https://cda.acme.com' });
-  assert.deepEqual(cdaOnly.rules.map((r) => r.id), ['weegloo-global-rules'], 'cma 없이도 제외');
-  assert.deepEqual(applyTermsExclusion(RESOURCES, null).rules.length, 2, '매핑 없음 → 그대로');
 });
 
 // ── 버전 룰 굽기 순서: 템플릿이 삽입하는 체크 URL도 매핑을 타야 함 ─────────────

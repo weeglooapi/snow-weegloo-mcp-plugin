@@ -31,7 +31,6 @@
 | 매핑 단위 | 키는 **서비스명 8개**(cma/cda/acma/acda/upload/auth/console/ai — 전체 origin 키도 정규화 수용), 값은 대상 origin — 치환은 **호스트 문자열 + 문자 경계 검사** | 경로 단위 매핑은 과설계. **호스트 단위 치환의 근거(실측)**: 본문에 scheme 없는 bare 호스트 언급이 52곳(auth 29·cma 17·cda 4·upload 2) — origin 단위로만 치환하면 산문 언급이 프로덕션 호스트로 남아 안내가 뒤섞임. ⚠️ 단 8개 호스트는 상호 비중첩이 **아님**(`acma`⊃`cma`, `acda`⊃`cda` — 구현 중 테스트로 발견) → 단순 replaceAll이면 cma 매핑이 acma를 오염. **앞뒤가 호스트 문자([A-Za-z0-9-])가 아닐 때만 매칭**하는 경계 정규식으로 치환(순서 무관·오답 예시 `cda-weegloo.com`은 dash 경계라 불변) |
 | 기본값 | 매핑 없음 = **현행과 바이트 동일** | breaking 없음이 최우선 |
 | 버전 체크 | **매핑 대상** (`ai.sn-weegloo.com` 통째로) | 초안은 "공용 유지"였으나 사용자 결정으로 전환 — 고객 스택이 `/v1/version?branch=`를 제공. `/mcp`(MCP 서버)와 같은 origin이라 별도 `mcp` 키 없이 origin 매핑 하나로 둘 다 커버(단순화) |
-| 약관 게이트 | **origins 매핑이 하나라도 있으면 `weegloo-terms-consent` 룰 자동 제외** | origins 사용 = 사실상 B2B 납품/스테이징뿐(사용자 판단) — weegloo 운영 스택의 약관 게이트가 성립하지 않는 환경. **초안(cma 키 조건부 제외)은 단순화를 위해 기각** — 조건부가 설명 비용만 늘리고, cda-only 스테이징에서 게이트를 잃는 비용은 실질 0(내부 사용자). 링크(`weegloo.com/terms`)는 이 룰에만 존재(3곳)해 룰 제외와 함께 자연 소멸 |
 | docs | **공용 고정** (매핑 제외) | 고객이 docs 미러를 둘 가능성 낮음. 폐쇄망 요구가 실제로 오면 그때 매핑 키 추가(순수 추가) |
 | 콘텐츠 소스 | **공용 레포 단일** — 룰/스킬의 사설 레포(포크) 납품은 **비지원** | 엔터프라이즈도 콘텐츠는 공용, 도메인만 origins 로 교체하는 모델. 덕분에 update 커맨드가 환경 무관하게 최소형으로 유지됨(repo 를 기록에 영속할 필요 없음). `WEEGLOO_REPO` env 는 개발/테스트용 오버라이드일 뿐 납품 경로 아님 |
 | 플래그 네이밍 | **`--origins`** (env `WEEGLOO_ORIGINS`, 기록 키 `origins`) | 초안 `--hosts`는 기존 `--host`(Xcode GUI 호스트)와 한 글자 차이라 오타/혼동 위험 — 사용자 지적으로 리네임. 후보: `--domains`(직관적), `--origins`(기술적으로 정확 — 키가 origin), `--endpoints`(경로 포함 연상이라 부적합) 중 **origins 채택**(사용자 결정) |
@@ -107,16 +106,6 @@
 - 기록에 `origins` 없음(기존 설치) = 매핑 없음 = 현행 동작.
 - 안내 커맨드는 최소형 유지 — 브랜치(`ref`)와 같은 원리로 기록이 단일 소스.
 
-## 6. 특수 규칙 — origins 매핑 ⇒ terms-consent 룰 제외
-
-- origins 매핑이 하나라도 있으면 `weegloo-terms-consent` 를
-  **카탈로그에서 제거** (install 체크박스에도 안 나오고, update의 add에도 없음).
-- **PR-0 상호작용**: terms-consent 는 코어 룰(강제 설치)이므로, 이 경우 **코어 강제도
-  함께 해제** — `CORE_RULE_IDS` 적용 지점(install 체크박스 합류 + update 의 `add ∪ CORE`)이
-  "origins 매핑 없음"을 조건으로 가짐. `weegloo-version` 코어 강제는 무관하게 유지.
-- update 시 기존에 깔려 있던 terms-consent 룰은 upstream-삭제와 동일하게 **정리(prune)** 됨
-  (카탈로그에서 빠졌으므로 기존 집합 연산이 자연히 처리 — 추가 코드 불필요).
-
 ## 7. 엣지 케이스
 
 - **치환 안전성**: 호스트 경계 정규식(§2 매핑 단위)이 담보 — `acma`⊃`cma` 중첩, 오답 예시
@@ -141,7 +130,6 @@
 - [ ] `version?branch=` ↔ 매니페스트 `version` 동일 소스 확인
 - [ ] 브라우저 SDK(`weegloo-service-user`)가 **auth base URL 을 설정으로 받는지** 확인 —
       내부에 `auth.sn-weegloo.com` 하드코딩이면 공용 SDK가 고객 auth 와 통신 불가 (SDK 측 선행 수정)
-- [ ] terms-consent 제외에 따른 약관 처리(계약/자체 게시) 확인
 
 ## 9. 작업 분할
 
@@ -153,7 +141,6 @@
 - 기록 스키마에 `origins` 추가 (`self-update.js` read/write) + update 의 자동 재적용.
 
 ### PR-B — 특수 규칙 + 충돌 확장 (~1일)
-- origins 매핑 ⇒ terms-consent 카탈로그 제거 + 코어 강제 조건부 (install·update 공통).
 - 공유 스토어 충돌 감지에 origins 상이 추가.
 
 ### 테스트
