@@ -7,13 +7,20 @@
  *
  *   HUMAN GATE 1 — which version bump?  The script NEVER guesses. When a bump is
  *     required it stops and reports NEEDS_BUMP; the caller must pass `--bump`.
- *   HUMAN GATE 2 — actually publish?  Publishing to the public registry is
- *     irreversible. The script prints the exact plan and stops UNLESS `--yes` is
- *     given. No `--yes`, no publish.
+ *   HUMAN GATE 2 — actually publish?  A publish is irreversible. The script prints
+ *     the exact plan and stops UNLESS `--yes` is given. No `--yes`, no publish.
  *
- * Everything else — config, npm auth (NPM_TOKEN + .npmrc), branch/dirty checks,
- * published-vs-current version comparison, tests, and the final report — is
- * mechanical and lives here, not in the skill.
+ * Everything else — config, npm auth, branch/dirty checks, published-vs-current
+ * version comparison, tests, and the final report — is mechanical and lives here,
+ * not in the skill.
+ *
+ * REGISTRY: this fork publishes to the INTERNAL registry named by
+ * `package.json` "publishConfig.registry", and every npm call here is pinned to it
+ * explicitly. That pin is not redundant: `publishConfig` applies to `npm publish`
+ * but NOT to `npm view` / `npm whoami`, which would otherwise hit the default
+ * registry — where a DIFFERENT `weegloo` package sits at a HIGHER version. Reading
+ * that one made the version comparison report "registry is AHEAD" and refuse to
+ * publish, so the pin is what keeps the comparison meaningful.
  *
  * Commands:
  *   preflight   (default)  Run all checks, print a status block + a single verdict.
@@ -106,6 +113,14 @@ export function parseNpmTokenFromEnv(text) {
   return val || null;
 }
 
+/** The public npm registry, in the spellings npm itself uses. `--access` only means something there. */
+const PUBLIC_REGISTRY = /^https?:\/\/registry\.npmjs\.(org|com)\/?$/;
+
+/** True when this registry is npmjs — the only place `--access public` is meaningful. */
+export function isPublicRegistry(registry) {
+  return !registry || PUBLIC_REGISTRY.test(String(registry).trim());
+}
+
 /** Read NPM_TOKEN from the environment, or from a gitignored .env (package dir, then repo root). */
 function findNpmToken() {
   if (process.env.NPM_TOKEN) return { token: process.env.NPM_TOKEN, source: 'env' };
@@ -132,21 +147,49 @@ function preflight(opts) {
   if (pluginRef !== distTag) {
     warnings.push(`package.json "pluginRef" (${pluginRef}) != dist-tag (${distTag}) — installer fetches skills/rules from the "${pluginRef}" branch.`);
   }
-
-  // ── auth: NPM_TOKEN + .npmrc + npm whoami ──
-  const { token, source: tokenSource } = findNpmToken();
-  let whoami = null;
-  if (!token) {
-    blockers.push('NPM_TOKEN not found (env or .env). Create a Granular/Automation publish token and put NPM_TOKEN=... in .env.');
-  } else {
-    const env = { ...process.env, NPM_TOKEN: token };
-    const who = run('npm', ['whoami'], { env });
-    if (who.code === 0 && who.stdout) whoami = who.stdout;
-    else blockers.push(`npm whoami failed (token wrong/expired?): ${who.stderr || who.stdout || 'no output'}`);
+  // The registry every npm call below is pinned to. publishConfig is the single source of
+  // truth (it is what `npm publish` obeys), so the flag can never disagree with the target.
+  const registry = pkg.publishConfig?.registry || null;
+  if (!registry) {
+    warnings.push('package.json has no "publishConfig.registry" — npm will use the default registry.');
   }
+  const registryFlag = registry ? [`--registry=${registry}`] : [];
+
+  // ── auth: whichever mechanism actually authenticates against THIS registry ──
+  // Two valid setups: a credential already in ~/.npmrc for this registry (the normal
+  // developer case here), or NPM_TOKEN + a .npmrc that resolves ${NPM_TOKEN} (CI).
+  // Ambient credentials are tried FIRST so a working setup is never rejected for
+  // lacking an NPM_TOKEN it does not need.
+  const { token, source: envTokenSource } = findNpmToken();
+  let whoami = null;
+  let tokenSource = null;
+  let authEnv = process.env;
+  const askWhoami = (env) => run('npm', ['whoami', ...registryFlag], { env });
+
+  const ambient = askWhoami(process.env);
+  if (ambient.code === 0 && ambient.stdout) {
+    whoami = ambient.stdout;
+    tokenSource = '~/.npmrc (ambient credential)';
+  } else if (token) {
+    authEnv = { ...process.env, NPM_TOKEN: token };
+    const viaToken = askWhoami(authEnv);
+    if (viaToken.code === 0 && viaToken.stdout) {
+      whoami = viaToken.stdout;
+      tokenSource = `NPM_TOKEN via ${envTokenSource}`;
+    } else {
+      blockers.push(`npm whoami failed for ${registry || 'the default registry'} (token wrong/expired?): ${viaToken.stderr || viaToken.stdout || 'no output'}`);
+    }
+  } else {
+    blockers.push(`not authenticated to ${registry || 'the default registry'}. Either add its credential to ~/.npmrc, or set NPM_TOKEN (env or a gitignored .env) alongside an installer-cli/.npmrc that resolves \${NPM_TOKEN}.`);
+  }
+
+  // The ${NPM_TOKEN}-resolving .npmrc only matters when auth actually comes from NPM_TOKEN;
+  // an ambient ~/.npmrc credential needs no package-local file.
   const npmrcPath = join(PACKAGE_ROOT, '.npmrc');
   const npmrcOk = existsSync(npmrcPath) && readFileSync(npmrcPath, 'utf8').includes('${NPM_TOKEN}');
-  if (!npmrcOk) warnings.push('installer-cli/.npmrc is missing or does not reference ${NPM_TOKEN}.');
+  if (!npmrcOk && tokenSource?.startsWith('NPM_TOKEN')) {
+    warnings.push('installer-cli/.npmrc is missing or does not reference ${NPM_TOKEN}.');
+  }
   const gitignore = existsSync(join(PACKAGE_ROOT, '.gitignore')) ? readFileSync(join(PACKAGE_ROOT, '.gitignore'), 'utf8') : '';
   if (!/(^|\n)\.npmrc(\s|$)/.test(gitignore) || !/(^|\n)\.env(\s|$)/.test(gitignore)) {
     warnings.push('.gitignore should ignore both .npmrc and .env (secrets must never be committed).');
@@ -161,9 +204,11 @@ function preflight(opts) {
   if (dirty) warnings.push(`working tree is dirty (${dirty.split('\n').length} changed path(s)). Commit/push is your job, done separately.`);
 
   // ── version: published vs current (3-way) ──
+  // Pinned to `registry`: without the flag this reads the DEFAULT registry, whose
+  // same-named package sits at a higher version and yields a bogus "registry ahead".
   let published = null;
-  if (token || process.env.NPM_TOKEN) {
-    const view = run('npm', ['view', packageName, 'version'], { env: token ? { ...process.env, NPM_TOKEN: token } : process.env });
+  if (whoami) {
+    const view = run('npm', ['view', packageName, 'version', ...registryFlag], { env: authEnv });
     if (view.code === 0 && view.stdout) published = view.stdout;
     else if (/E404|is not in this registry|404/.test(view.stderr)) published = null; // never published
     else if (view.stderr) warnings.push(`could not read published version: ${view.stderr.split('\n')[0]}`);
@@ -185,7 +230,7 @@ function preflight(opts) {
   };
 
   return {
-    packageName, current, published, distTag, pluginRef, branch,
+    packageName, current, published, distTag, pluginRef, branch, registry,
     tokenSource, whoami, npmrcOk, dirty: Boolean(dirty),
     versionState, nextVersions, warnings, blockers, verdict,
   };
@@ -250,12 +295,13 @@ export function bumpVersion(current, level) {
  * @param {'BLOCKED'|'NEEDS_BUMP'|'READY'} p.verdict
  * @param {string} p.current   current package.json version
  * @param {string} p.distTag
+ * @param {string|null} [p.registry]  publishConfig.registry — pinned on the publish command
  * @param {{bump?:string, yes?:boolean, tests?:boolean}} [p.opts]
  * @returns {{ steps: Array<object>, exit: number, reason: string, version: string }}
  *   reason ∈ blocked | bump-required | bad-bump | plan | publish
  *   step.type ∈ bump | test | skip-test | plan | publish
  */
-export function planRelease({ verdict, current, distTag, opts = {} }) {
+export function planRelease({ verdict, current, distTag, registry = null, opts = {} }) {
   if (verdict === 'BLOCKED') {
     return { steps: [], exit: 1, reason: 'blocked', version: current };
   }
@@ -276,7 +322,14 @@ export function planRelease({ verdict, current, distTag, opts = {} }) {
   steps.push(opts.tests === false ? { type: 'skip-test' } : { type: 'test' });
 
   // Gate 2 — publish. Without --yes we only plan (dry run).
-  const args = ['publish', '--access', 'public', '--tag', distTag];
+  // `--registry` is spelled out even though publishConfig already sets it, so the printed
+  // plan names the target — publishing to the wrong registry is the failure mode here.
+  // `--access public` is an npmjs concept (and the default for an unscoped name), so it is
+  // sent only when the target actually IS npmjs.
+  const args = ['publish'];
+  if (isPublicRegistry(registry)) args.push('--access', 'public');
+  args.push('--tag', distTag);
+  if (registry) args.push(`--registry=${registry}`);
   if (opts.yes) {
     steps.push({ type: 'publish', args });
     return { steps, exit: 0, reason: 'publish', version };
@@ -290,7 +343,10 @@ function printStatus(s) {
   const line = (mark, label, msg) => console.log(`${mark} ${c.bold(label.padEnd(9))} ${msg}`);
   console.log(c.bold(`\nweegloo release preflight  ${c.dim(`(${PACKAGE_ROOT})`)}\n`));
   line(MARK.info, 'config', `package=${s.packageName}  dist-tag=${s.distTag}  pluginRef=${s.pluginRef}`);
-  line(s.whoami ? MARK.ok : MARK.bad, 'auth', s.whoami ? `whoami=${s.whoami}  (token via ${s.tokenSource})` : 'no working npm token');
+  // The registry gets its own line: every version number below is read from it, so a wrong
+  // one silently invalidates the whole comparison.
+  line(s.registry ? MARK.ok : MARK.warn, 'registry', s.registry || '(default — publishConfig.registry not set)');
+  line(s.whoami ? MARK.ok : MARK.bad, 'auth', s.whoami ? `whoami=${s.whoami}  (via ${s.tokenSource})` : 'not authenticated to this registry');
   line(s.branch === s.distTag ? MARK.ok : MARK.warn, 'repo', `branch=${s.branch || '?'}${s.branch === s.distTag ? '' : `  (expected ${s.distTag})`}`);
   line(s.dirty ? MARK.warn : MARK.ok, 'git', s.dirty ? 'working tree dirty' : 'clean');
   const vmsg = {
@@ -340,7 +396,7 @@ function main() {
 
   // ── release ── decide (pure) then execute the plan step by step.
   emit(s, opts);
-  const plan = planRelease({ verdict: s.verdict, current: s.current, distTag: s.distTag, opts });
+  const plan = planRelease({ verdict: s.verdict, current: s.current, distTag: s.distTag, registry: s.registry, opts });
 
   if (plan.reason === 'blocked') {
     console.error(c.red('BLOCKED — resolve the blocker(s) above before releasing.'));
@@ -378,20 +434,25 @@ function main() {
       console.log(`\n${c.bold('PLAN')} — nothing published yet.`);
       console.log(`  version : ${plan.version}`);
       console.log(`  dist-tag: ${s.distTag}`);
+      console.log(`  registry: ${s.registry || '(default)'}`);
       console.log(`  command : ${c.cyan(`npm ${step.args.join(' ')}`)}  ${c.dim('(cwd: installer-cli)')}`);
       console.log(`\nConfirm, then re-run with ${c.bold('--yes')} to publish.`);
       process.exit(0);
     } else if (step.type === 'publish') {
+      // Same env preflight authenticated with: NPM_TOKEN only when that is what worked,
+      // so an ambient ~/.npmrc credential is not shadowed by a stale .env token.
       const { token } = findNpmToken();
-      const env = token ? { ...process.env, NPM_TOKEN: token } : process.env;
+      const env = token && s.tokenSource?.startsWith('NPM_TOKEN') ? { ...process.env, NPM_TOKEN: token } : process.env;
       console.log(`\n${MARK.info} publish  npm ${step.args.join(' ')}`);
       const pub = spawnSync('npm', step.args, { cwd: PACKAGE_ROOT, env, stdio: 'inherit' });
       if (pub.status !== 0) {
-        console.error(c.red('\npublish failed. If it demanded an OTP, the token type is wrong — use a Granular/Automation token.'));
+        console.error(c.red(`\npublish failed. Check that ${s.whoami || 'this account'} may publish ${s.packageName} to ${s.registry || 'the default registry'}` +
+          (isPublicRegistry(s.registry) ? ', and if it demanded an OTP use a Granular/Automation token.' : ' (a repository that already holds a version cannot be overwritten).')));
         process.exit(1);
       }
       console.log(`\n${MARK.ok} ${c.bold('published')} ${s.packageName}@${plan.version}  (tag ${s.distTag})`);
-      console.log(`  https://www.npmjs.com/package/${s.packageName}`);
+      console.log(`  registry: ${s.registry || 'https://registry.npmjs.org/'}`);
+      console.log(`  install : ${c.cyan(`npx -y${s.registry ? ` --registry=${s.registry}` : ''} ${s.packageName}@${s.distTag}`)}`);
       if (opts.bump) console.log(c.dim('  reminder: package.json has an uncommitted version bump — the skill commits it.'));
     }
   }

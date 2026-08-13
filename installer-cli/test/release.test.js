@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { cmpVersion, classifyVersion, decideVerdict, bumpVersion, parseNpmTokenFromEnv, planRelease } from '../scripts/release.mjs';
+import { cmpVersion, classifyVersion, decideVerdict, bumpVersion, parseNpmTokenFromEnv, planRelease, isPublicRegistry } from '../scripts/release.mjs';
 
 /** step types of a plan, in order — handy for asserting flow shape. */
 const flow = (plan) => plan.steps.map((s) => s.type);
@@ -135,10 +135,31 @@ test('planRelease: --no-tests replaces the test step with skip-test', () => {
 });
 
 test('planRelease: publish command carries the dist-tag (default and override)', () => {
+  const args = (p) => p.steps.find((s) => s.type === 'publish').args;
+  // No registry configured ⇒ the default (public) registry, where --access public applies.
   const def = planRelease({ verdict: 'READY', current: '1.6.0', distTag: 'latest', opts: { yes: true } });
-  assert.deepEqual(def.steps.find((s) => s.type === 'publish').args, ['publish', '--access', 'public', '--tag', 'latest']);
+  assert.deepEqual(args(def), ['publish', '--access', 'public', '--tag', 'latest']);
   const beta = planRelease({ verdict: 'READY', current: '1.6.0', distTag: 'beta', opts: { yes: true } });
-  assert.deepEqual(beta.steps.find((s) => s.type === 'publish').args, ['publish', '--access', 'public', '--tag', 'beta']);
+  assert.deepEqual(args(beta), ['publish', '--access', 'public', '--tag', 'beta']);
+});
+
+test('planRelease: an internal registry is pinned on the publish command, without --access', () => {
+  // publishConfig already points npm at the registry; the explicit flag makes the printed
+  // plan name the target, since publishing to the wrong registry is the failure mode.
+  const registry = 'https://artifactory.navercorp.com/artifactory/api/npm/npm-local/';
+  const p = planRelease({ verdict: 'READY', current: '1.6.0', distTag: 'latest', registry, opts: { yes: true } });
+  assert.deepEqual(p.steps.find((s) => s.type === 'publish').args, [
+    'publish', '--tag', 'latest', `--registry=${registry}`,
+  ]);
+});
+
+test('isPublicRegistry: only npmjs (or an unset registry) counts as public', () => {
+  assert.ok(isPublicRegistry(null));
+  assert.ok(isPublicRegistry('https://registry.npmjs.org/'));
+  assert.ok(isPublicRegistry('https://registry.npmjs.org'));
+  assert.ok(!isPublicRegistry('https://artifactory.navercorp.com/artifactory/api/npm/npm-local/'));
+  // A host that merely mentions npmjs is not it — the pattern is anchored.
+  assert.ok(!isPublicRegistry('https://registry.npmjs.org.evil.example/'));
 });
 
 test('importing release.mjs does not run the CLI (main is guarded)', () => {
