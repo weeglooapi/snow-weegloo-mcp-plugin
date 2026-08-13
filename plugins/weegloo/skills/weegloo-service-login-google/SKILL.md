@@ -1,6 +1,6 @@
 ---
 name: weegloo-service-login-google
-description: Provider-specific setup for Weegloo ServiceLogin with **Google** OAuth 2.0 — the exact Google Cloud Console steps to create an OAuth client and obtain the `clientId` / `clientSecret`, the Google redirect URI to register (`https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/google`), the OAuth consent screen / Test users gotcha, and the walkthrough to hand the user when asking for the blocking credentials. Use ONLY when the chosen provider is Google. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for another provider (GitHub, Facebook, GitLab, LINE, Kakao, or Naver).
+description: Provider-specific setup for Weegloo ServiceLogin with **Google** OAuth 2.0 — the exact Google Cloud Console steps to create an OAuth client and obtain the `clientId` / `clientSecret`, the Google redirect URI to register (`https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/google`), the OAuth consent screen / Test users gotcha, and the walkthrough to hand the user when asking for the blocking credentials. Use ONLY when the chosen provider is Google. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for another provider (GitHub, Facebook, GitLab, LINE, Kakao, Naver, or connect).
 ---
 
 # Weegloo ServiceLogin — Google provider setup
@@ -15,7 +15,7 @@ that `ServiceLogin` needs. Everything else (the `auth.sn-weegloo.com` wire proto
 > **`weegloo-service-login-sdk`** (the spine). This skill does **not** decide whether to use Google —
 > the provider must already be chosen from the product's actual need. **Do not use this for a
 > non-Google provider** (other providers follow the same *shape*, but their console steps differ —
-> GitHub, Kakao, Naver, and LINE have their own dedicated skills; Facebook and GitLab ride the spine's
+> GitHub, Kakao, Naver, LINE, and connect have their own dedicated skills; Facebook and GitLab ride the spine's
 > generic shape — see *Configuration responsibilities* in the spine).
 
 ## Google's redirect URI (deploy-independent — register it now)
@@ -71,3 +71,4 @@ end the turn by *asking for the credentials*, not by reporting Google sign-in as
 - **Provider-agnostic spine (wire protocol, SDK, `callbackUrl`, pitfalls):** **`weegloo-service-login-sdk`**.
 - **Conceptual model (ServiceLogin / ServiceUserRole / ServiceUser):** **`weegloo-service-login`**.
 - **Picking the API combo per service type:** **`weegloo-service-architecture`**.
+- **Other dedicated provider skills:** **`weegloo-service-login-github`** (GitHub), **`weegloo-service-login-kakao`** (Kakao), **`weegloo-service-login-naver`** (Naver), **`weegloo-service-login-line`** (LINE), **`weegloo-service-login-connect`** (connect — internal NEOID SSO).

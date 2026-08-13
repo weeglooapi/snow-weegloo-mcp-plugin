@@ -1,6 +1,6 @@
 ---
 name: weegloo-service-login-kakao
-description: Provider-specific setup for Weegloo ServiceLogin with **Kakao** (Kakao Login) OAuth 2.0 — the exact Kakao Developers steps to create an app and obtain the `clientId` / `clientSecret`, the Kakao Redirect URI to register (`https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/kakao`), the REST-API-key-is-the-clientId gotcha, the Client Secret generate-and-enable gotcha, the consent-item / Business-app requirement for email, and the walkthrough to hand the user when asking for the blocking credentials. Use ONLY when the chosen provider is Kakao. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for Google, GitHub, Facebook, GitLab, LINE, or Naver.
+description: Provider-specific setup for Weegloo ServiceLogin with **Kakao** (Kakao Login) OAuth 2.0 — the exact Kakao Developers steps to create an app and obtain the `clientId` / `clientSecret`, the Kakao Redirect URI to register (`https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/kakao`), the REST-API-key-is-the-clientId gotcha, the Client Secret generate-and-enable gotcha, the consent-item / Business-app requirement for email, and the walkthrough to hand the user when asking for the blocking credentials. Use ONLY when the chosen provider is Kakao. For the provider-agnostic wire protocol / SDK / callback flow see `weegloo-service-login-sdk`; for the conceptual model see `weegloo-service-login`. Do not use this for Google, GitHub, Facebook, GitLab, LINE, Naver, or connect.
 ---
 
 # Weegloo ServiceLogin — Kakao provider setup
@@ -15,7 +15,7 @@ This is the **Kakao instance** of the provider-agnostic ServiceLogin setup. It c
 > **`weegloo-service-login-sdk`** (the spine). This skill does **not** decide whether to use Kakao —
 > the provider must already be chosen from the product's actual need. **Do not use this for a
 > non-Kakao provider** (other providers follow the same *shape*, but their console steps differ —
-> Google, GitHub, Naver, and LINE have their own dedicated skills; Facebook and GitLab ride the spine's
+> Google, GitHub, Naver, LINE, and connect have their own dedicated skills; Facebook and GitLab ride the spine's
 > generic shape).
 
 ## Kakao's Redirect URI (deploy-independent — register it now)
@@ -91,5 +91,5 @@ So treat email as **mandatory setup**, not optional:
 
 - **Provider-agnostic spine (wire protocol, SDK, `callbackUrl`, pitfalls):** **`weegloo-service-login-sdk`**.
 - **Conceptual model (ServiceLogin / ServiceUserRole / ServiceUser):** **`weegloo-service-login`**.
-- **Other dedicated provider skills:** **`weegloo-service-login-google`** (Google), **`weegloo-service-login-github`** (GitHub), **`weegloo-service-login-naver`** (Naver), **`weegloo-service-login-line`** (LINE).
+- **Other dedicated provider skills:** **`weegloo-service-login-google`** (Google), **`weegloo-service-login-github`** (GitHub), **`weegloo-service-login-naver`** (Naver), **`weegloo-service-login-line`** (LINE), **`weegloo-service-login-connect`** (connect — internal NEOID SSO).
 - **Picking the API combo per service type:** **`weegloo-service-architecture`**.
