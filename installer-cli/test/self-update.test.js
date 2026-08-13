@@ -139,7 +139,7 @@ test('applySelfUpdateTemplate is a no-op when the version rule is absent', () =>
   assert.deepEqual(out, [OTHER]);
 });
 
-test('buildStamp carries last_check + installed version + ref (nulls omitted, legacy-compatible)', () => {
+test('buildStamp carries last_check + installed version + ref (nulls omitted)', () => {
   assert.deepEqual(buildStamp('2026-07-21T14:30:00'), { last_check: '2026-07-21T14:30:00' });
   assert.deepEqual(buildStamp('2026-07-21T14:30:00', '12', 'develop'), {
     last_check: '2026-07-21T14:30:00',

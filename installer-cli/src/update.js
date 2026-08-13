@@ -6,8 +6,7 @@
  *  - the SELECTION AUTHORITY is the per-agent installed.json (that is what the record is for);
  *    the only sanctioned deselection channel is the installer's checkbox, so a hand-deleted
  *    skill/rule is treated as drift and RESTORED, exactly like corrupted file content. Disk is
- *    the fallback only when no per-agent record exists yet (a pre-migration install) — and the
- *    legacy flat record is never a selection source, because it mixes other agents' picks;
+ *    a hand-deleted skill/rule is treated as drift and RESTORED, exactly like corrupted content;
  *  - it is never re-asked and never defaults to "all" — the full-reinstall-on-update bug this
  *    flow replaces;
  *  - genuinely NEW upstream items are auto-added: new = catalog \ prevAvailable, where
@@ -37,7 +36,6 @@ import {
   applySelfUpdateTemplate,
   getVersionStampPath,
   getInstalledRecordPath,
-  getLegacyInstalledRecordPath,
   readInstalledRecord,
   syncInstalledRecord,
   withoutSharerClaims,
@@ -66,7 +64,6 @@ import {
   getAntigravityRulesDir,
   maintainAntigravityProjectRulesFile,
   toAntigravityRuleContent,
-  RULE_LOADING_ID,
 } from './antigravity.js';
 import { normalizeOrigins, applyOriginsToResources, originsEqual } from './origins.js';
 
@@ -103,8 +100,7 @@ function getAgentStore(agent, scope) {
     case 'antigravity':
       // Project rules are file-per-rule in .agents/rules (out of the shared AGENTS.md marker
       // store) — AGENTS.md keeps only the agent-agnostic bootstrap loader, which the other
-      // marker agents never touch, so rules carry no sharedWith anymore. `legacyMarkersFile`
-      // lets detection still see a pre-migration install whose rules exist only as markers.
+      // marker agents never touch, so rules carry no sharedWith anymore.
       // Global stays markers in the antigravity-private GEMINI.md.
       return scope === 'project'
         ? {
@@ -114,7 +110,6 @@ function getAgentStore(agent, scope) {
               dir: getAntigravityRulesDir(),
               ext: 'md',
               sharedWith: [],
-              legacyMarkersFile: getAntigravityRulesFile('project'),
               // Antigravity parses rule-file frontmatter for a `trigger` — inject always_on.
               transform: toAntigravityRuleContent,
             },
@@ -154,12 +149,9 @@ function readJsonSafe(filePath) {
  * CATALOG order (stable, matches what an install would produce).
  *
  * `selected*Ids` is the user's selection — the per-agent record when it exists, else the disk
- * scan (pre-migration fallback). In the fallback case it may contain ids that are not
- * weegloo's (a user-authored `weegloo-foo`); intersecting with the catalog here is what
- * guarantees such files are never written over (and syncInstalledRecord's record diff is what
- * guarantees they are never deleted). An empty `prevAvailable*` means the offering back then
- * is unknown (a legacy record) → no auto-add this cycle; the catalog snapshot written
- * afterwards makes the NEXT cycle precise.
+ * scan. The scan may surface ids that are not weegloo's (a user-authored `weegloo-foo`);
+ * intersecting with the catalog here is what guarantees such files are never written over (and
+ * syncInstalledRecord's record diff is what guarantees they are never deleted).
  *
  * @returns {{ addSkillIds: string[], newSkillIds: string[], addRuleIds: string[], newRuleIds: string[] }}
  */
@@ -193,9 +185,9 @@ export function planUpdate({
 
 /**
  * Refs of the OTHER agents that share a store with `agent` in this scope, read from their
- * per-agent stamps. A sharer that predates per-agent tracking is invisible here (its artifacts
- * live in the very stores it shares, so nothing on disk attributes to it) — that limitation is
- * accepted: last-writer-wins is also what installs have always done.
+ * per-agent stamps. A sharer with no stamp is invisible here (its artifacts live in the very
+ * stores it shares, so nothing on disk attributes to it) — that limitation is accepted:
+ * last-writer-wins is also what installs do.
  *
  * @returns {Array<{ agent: string, ref: string|null }>}
  */
@@ -248,34 +240,21 @@ export async function runUpdate(config, deps = {}) {
   log('');
 
   // ── Disk detection (prefix scan — deliberately catalog-free, see io.js) ────────────────────
-  // Disk is the selection FALLBACK for pre-migration installs, and the drift signal for the
-  // "restored" report; the selection authority is the per-agent record below.
+  // Disk is the drift signal for the "restored" report; the selection authority is the record.
   const diskSkillIds = listWeeglooSkillDirs(store.skills.dir);
-  let diskRuleIds =
+  const diskRuleIds =
     store.rules.kind === 'files'
       ? listWeeglooRuleFiles(store.rules.dir, store.rules.ext)
       : listWeeglooRuleMarkers(store.rules.file);
-  if (store.rules.legacyMarkersFile) {
-    // A pre-migration install's rules exist only as markers in the old shared context file —
-    // union them in (minus the bootstrap loader) so detection and the no-record selection
-    // fallback still see that install. Catalog intersection keeps foreign markers inert.
-    const legacy = listWeeglooRuleMarkers(store.rules.legacyMarkersFile).filter(
-      (id) => id !== RULE_LOADING_ID
-    );
-    diskRuleIds = [...new Set([...diskRuleIds, ...legacy])];
-  }
 
-  // ── Selection: the per-agent record is the authority; disk only when it doesn't exist ──────
+  // ── Selection: the per-agent record is the authority ───────────────────────────────────────
   // The record is exactly the metadata we keep for this purpose — a hand-deleted skill is drift
   // to repair (like corrupted content), NOT a deselection; deselecting happens in the install
-  // checkbox. The legacy flat record is never a selection source: it is shared by all agents
-  // (last-writer-wins), so it may carry OTHER agents' picks — it only feeds the prune diff.
+  // checkbox. No record at all ⇒ nothing was installed here, which the guard below reports.
   const recordPath = getInstalledRecordPath(scope, agent);
-  const legacyRecordPath = getLegacyInstalledRecordPath(scope);
-  const hasOwnRecord = fs.existsSync(recordPath);
-  const prev = hasOwnRecord ? readInstalledRecord(recordPath) : readInstalledRecord(legacyRecordPath);
-  const selectedSkillIds = hasOwnRecord ? prev.skills : diskSkillIds;
-  const selectedRuleIds = hasOwnRecord ? prev.rules : diskRuleIds;
+  const prev = readInstalledRecord(recordPath);
+  const selectedSkillIds = prev.skills;
+  const selectedRuleIds = prev.rules;
 
   // Environment: the origins mapping recorded at install is REAPPLIED verbatim — without this an
   // update would rewrite the content back to production origins. Tolerant normalize: a
@@ -417,13 +396,9 @@ export async function runUpdate(config, deps = {}) {
       }
     }
     if (agent === 'antigravity' && scope === 'project') {
-      // Keep the AGENTS.md bootstrap loader in place and (when no other marker agent is
-      // around) migrate legacy full-rule markers out — stale markers would outrank the fresh
-      // .agents/rules files in Antigravity's precedence.
-      const cleaned = maintainAntigravityProjectRulesFile();
-      if (cleaned.length > 0) {
-        log(chalk.dim(`  - Migrated ${cleaned.length} legacy rule marker(s) out of AGENTS.md`));
-      }
+      // Keep the AGENTS.md bootstrap loader in place — it is what points Antigravity at
+      // .agents/rules.
+      maintainAntigravityProjectRulesFile();
     }
   }
 
@@ -433,7 +408,6 @@ export async function runUpdate(config, deps = {}) {
     agent,
     stampPath,
     recordPath,
-    legacyRecordPath,
     version: resources.version,
     ref,
     origins,

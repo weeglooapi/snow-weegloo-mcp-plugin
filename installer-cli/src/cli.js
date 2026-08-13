@@ -166,9 +166,9 @@ export function resolveConfig({ values, env = {}, isTTY = true, pkgPluginRef = '
   const refPinned = !!flagRef || !!envRef;
   let pluginRef = flagRef || envRef || null;
   // In update mode an unpinned ref must stay null: the update flow resolves it from the
-  // agent's own stamp (the branch it was installed from), falling back to latest only when
-  // the stamp predates ref tracking. Defaulting to latest here would silently migrate a
-  // pinned install's branch.
+  // agent's own stamp (the branch it was installed from), falling back to latest only when the
+  // stamp is missing or has no ref. Defaulting to latest here would silently migrate a pinned
+  // install's branch.
   if (pluginRef == null && nonInteractive && !values.update) {
     pluginRef = pkgPluginRef || 'latest';
   }

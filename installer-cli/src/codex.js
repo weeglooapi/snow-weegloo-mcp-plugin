@@ -201,17 +201,6 @@ export function mergeCodexConfig(existingToml, mcpConfig) {
 }
 
 /**
- * Backward-compatible alias for callers that still import the old helper name.
- * Codex instruction rules are stored in AGENTS.md, not in Codex command .rules files.
- *
- * @param {'global' | 'project'} scope
- * @returns {string} Absolute path to AGENTS.md
- */
-export function getCodexRulesPath(scope = 'project') {
-  return getCodexInstructionsPath(scope);
-}
-
-/**
  * UTF-8 byte-order mark. Prepended to the Markdown context files we write (AGENTS.md /
  * GEMINI.md) so Windows editors reliably detect them as UTF-8 instead of guessing the
  * system ANSI codepage (e.g. CP949), which garbles non-ASCII rule text (Korean, etc.).

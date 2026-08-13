@@ -45,7 +45,6 @@ test('buildManifest is deterministic and embeds skill/rule text + MCP urls', () 
   // Content fingerprint: non-empty, and a pure function of content (verified by the
   // byte-identical re-build below) so the regenerate-on-push idempotence guard holds.
   assert.ok(typeof manifest.version === 'string' && manifest.version.length > 0, 'has version');
-  assert.equal(manifest.repoContentPrefix, 'plugins/weegloo');
   assert.ok(manifest.mcp.weeglooUrl.length > 0 && manifest.mcp.uploadApiUrl.length > 0);
   assert.ok(manifest.skills.length > 0, 'has skills');
   assert.ok(manifest.rules.length > 0, 'has rules');
@@ -72,7 +71,7 @@ test('buildManifest is deterministic and embeds skill/rule text + MCP urls', () 
 test('loadResources normalizes a manifest fetched from raw', async () => {
   const manifest = {
     schemaVersion: 1,
-    repoContentPrefix: 'plugins/weegloo',
+    version: 'testhash',
     mcp: { weeglooUrl: 'https://dev-ai.weegloo.com/mcp', uploadApiUrl: 'https://dev-upload.weegloo.com/v1' },
     skills: [{ id: 'a', files: { 'SKILL.md': 'hi', 'metadata.json': '{}' } }],
     rules: [{ id: 'r', content: 'rule body' }],
@@ -119,7 +118,7 @@ test('buildManifest throws when an existing .mcp.json is malformed', () => {
 test('loadResources returns null for an unsupported manifest schemaVersion', async () => {
   const v2 = {
     schemaVersion: 2,
-    repoContentPrefix: 'plugins/weegloo',
+    version: 'testhash',
     mcp: {},
     skills: [{ id: 'a', files: { 'SKILL.md': 'x' } }],
     rules: [],
@@ -147,7 +146,7 @@ test('loadResources returns null for a malformed entry (strict — no silent dro
   const realFetch = globalThis.fetch;
   stubManifest({
     schemaVersion: 1,
-    repoContentPrefix: 'plugins/weegloo',
+    version: 'testhash',
     mcp: { weeglooUrl: 'https://ai.sn-weegloo.com/mcp', uploadApiUrl: 'https://upload.sn-weegloo.com/v1' },
     skills: [
       { id: 'good', files: { 'SKILL.md': 'x' } },
@@ -166,7 +165,7 @@ test('loadResources returns null when mcp URLs are missing (defaults belong to t
   const realFetch = globalThis.fetch;
   stubManifest({
     schemaVersion: 1,
-    repoContentPrefix: 'plugins/weegloo',
+    version: 'testhash',
     mcp: {}, // no weeglooUrl/uploadApiUrl → reject (no consumer-side default)
     skills: [{ id: 'a', files: { 'SKILL.md': 'x' } }],
     rules: [{ id: 'r', content: 'body' }],

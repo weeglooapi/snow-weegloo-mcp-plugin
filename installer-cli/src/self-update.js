@@ -17,11 +17,6 @@
  *     stamp's `version` against the branch-scoped endpoint and rewrites ONLY `last_check`
  *     (preserving `version`, `ref`, and any other field) after a check.
  *
- * Legacy (pre-per-agent) installs used flat .weegloo/version-check.json + installed.json shared
- * by every agent. Those paths are no longer written: keeping the flat stamp fresh would make
- * not-yet-migrated agents' old rules misread it as "current" and never prompt the update that
- * migrates them. The flat installed.json IS still read once per agent — see syncInstalledRecord.
- *
  * The placeholders below live in the rule's source `.mdc`; values are substituted here, per
  * install, so the repo source stays clean and its content hash stays stable.
  */
@@ -49,8 +44,7 @@ export const CORE_RULE_IDS = [SELF_UPDATE_RULE_ID];
 
 /**
  * Splits a manifest rule list into forced-core vs user-selectable, preserving manifest order.
- * A core id missing from the manifest (an old branch that predates that rule) is simply
- * absent from `core` — nothing is invented.
+ * A core id missing from the manifest is simply absent from `core` — nothing is invented.
  *
  * @param {Array<{id:string, content:string}>} rules
  * @returns {{ core: Array<{id:string, content:string}>, optional: Array<{id:string, content:string}> }}
@@ -133,7 +127,7 @@ export function isoNow(now = new Date()) {
  * Stamp payload. `last_check` is the rule's in-session re-check anchor; `version` is the
  * INSTALLED content version the rule compares against the endpoint; `ref` is the branch this
  * agent installed from — the only structured record of it (the update flow reads it back).
- * null/absent version/ref are omitted (a legacy-shaped stamp stays legacy-shaped).
+ * A null/absent version or ref is omitted rather than written as null.
  */
 export function buildStamp(lastCheck, version = null, ref = null) {
   const stamp = { last_check: lastCheck };
@@ -190,19 +184,6 @@ export function writeVersionStamp(stampPath, { now = isoNow(), version = null, r
  */
 export function getInstalledRecordPath(scope = 'global', agent, cwd = process.cwd()) {
   return path.join(weeglooStateDir(scope, cwd), agent, 'installed.json');
-}
-
-/**
- * The LEGACY (pre-per-agent) record path, shared by every agent of a scope. Never written
- * anymore — read exactly once per agent, as the reconcile fallback on that agent's first
- * per-agent run, so skills/rules deleted upstream since the legacy install still get pruned
- * instead of surviving as orphans that keep loading stale guidance into sessions.
- *
- * @param {'global'|'project'} [scope]
- * @param {string} [cwd]
- */
-export function getLegacyInstalledRecordPath(scope = 'global', cwd = process.cwd()) {
-  return path.join(weeglooStateDir(scope, cwd), 'installed.json');
 }
 
 /**
@@ -318,14 +299,6 @@ export function projectMarkerRuleSharers(agent, cwd = process.cwd()) {
  * this run (MCP-only, or --ignore-skill / --ignore-rule) is left untouched: nothing is removed
  * and its prior record is preserved verbatim.
  *
- * MIGRATION FALLBACK: when this agent has no per-agent record yet, `prev` is read once from the
- * legacy flat installed.json (shared by all agents pre-split). Without it, a migrating install
- * would see an empty prev and skills/rules deleted upstream would survive as permanent orphans —
- * stale content that agents keep loading. Safe even though the flat record may list OTHER
- * agents' ids: the removal callbacks are existence-checked inside THIS agent's own directories,
- * so foreign ids are no-ops. The legacy file itself is never written or deleted (other agents'
- * first migrations still need it as their fallback).
- *
  * The record is written to installed.json; the throttle stamp is written to the rule-owned
  * version-check.json. Keeping them in separate files is deliberate — the weegloo-version rule
  * periodically overwrites the stamp, and that must never wipe the record.
@@ -336,7 +309,6 @@ export function projectMarkerRuleSharers(agent, cwd = process.cwd()) {
  *   now?: string,
  *   stampPath?: string,
  *   recordPath?: string,
- *   legacyRecordPath?: string,
  *   version?: string|null,
  *   ref?: string|null,
  *   manageSkills: boolean,
@@ -356,7 +328,6 @@ export function syncInstalledRecord({
   now = isoNow(),
   stampPath = getVersionStampPath(scope, agent),
   recordPath = getInstalledRecordPath(scope, agent),
-  legacyRecordPath = getLegacyInstalledRecordPath(scope),
   version = null,
   ref = null,
   origins = null,
@@ -369,9 +340,7 @@ export function syncInstalledRecord({
   availableRuleIds = [],
   removeRules = () => [],
 }) {
-  const prev = fs.existsSync(recordPath)
-    ? readInstalledRecord(recordPath)
-    : readInstalledRecord(legacyRecordPath);
+  const prev = readInstalledRecord(recordPath);
   const nowSkills = new Set(installedSkillIds);
   const nowRules = new Set(installedRuleIds);
 

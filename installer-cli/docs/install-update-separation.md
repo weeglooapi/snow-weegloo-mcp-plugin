@@ -84,7 +84,7 @@ project:  <project>/.weegloo/<agent>/version-check.json , …/installed.json
 ## 5. 업데이트의 집합 연산
 
 ```
-selected = per-agent 기록의 선택 (권위)        # 기록 부재(pre-migration) 시에만: 디스크 스캔
+selected = per-agent 기록의 선택 (권위)        # 기록이 없으면 = 설치 안 됨 → no-op
            → planUpdate에서 카탈로그와 교집합   # 손삭제 = 드리프트 → 복구 ("N restored" 보고)
 new      = upstream \ prevAvailable           # 진짜 신규만 (제안된 적 없던 것)
 add      = (selected ∩ upstream) ∪ new ∪ CORE # 이번에 설치
@@ -183,8 +183,6 @@ Antigravity가 workspace 룰 위치로 `.agents/rules/*.md` 를 공식 지원함
 - 적용: `.agents/skills` (codex↔antigravity), project `AGENTS.md` 마커 (codex↔androidstudio).
   마커의 antigravity 클레임은 **pre-switch일 때만** 유효 — `.agents/rules` 에 weegloo 룰 파일이
   생기면 그 기록은 파일을 가리키므로 마커 보존 근거가 안 됨(`projectMarkerRuleSharers`).
-- 상대가 pre-migration(기록 없음)이면 클레임을 못 봐 기존처럼 삭제될 수 있으나, 마이그레이션
-  업데이트가 복구 — 과도기 한정 현행 유지.
 
 - 쓰기는 룰 id별 마커 upsert(합집합)라 파일 전체를 갈아엎지 않음. 겹치는 룰의 **내용**은
   last-writer-wins.

@@ -9,7 +9,6 @@ import {
   uploadServerCommand,
   removeSkillDirs,
   removeRuleFiles,
-  listWeeglooRuleMarkers,
 } from './io.js';
 import { upsertRuleInAgentsMd, removeRuleMarkers } from './codex.js';
 import { applySelfUpdateTemplate, syncInstalledRecord, withoutSharerClaims } from './self-update.js';
@@ -138,39 +137,15 @@ export function toAntigravityRuleContent(content) {
 }
 
 /**
- * Is another marker-store agent (codex / androidstudio) plausibly installed in THIS project?
- * Their AGENTS.md markers are indistinguishable from antigravity's legacy ones, so the legacy
- * cleanup below may only run when nothing hints at them. Conservative on purpose: any hint —
- * per-agent tracking dir, or the agent's own project dir — blocks the cleanup (the cost of a
- * false "present" is just some redundant-but-refreshed markers left behind; the cost of a false
- * "absent" would be stripping another agent's live rules).
- */
-function otherMarkerAgentsPresent() {
-  const cwd = process.cwd();
-  return (
-    fs.existsSync(path.join(cwd, '.weegloo', 'codex')) ||
-    fs.existsSync(path.join(cwd, '.weegloo', 'androidstudio')) ||
-    fs.existsSync(path.join(cwd, '.codex')) ||
-    fs.existsSync(path.join(cwd, '.android-studio'))
-  );
-}
-
-/**
  * Maintains the project AGENTS.md for the file-per-rule layout: upserts the bootstrap loader
- * marker, and — ONLY when no other marker agent is detected — removes antigravity's legacy
- * full-rule markers. The cleanup matters because AGENTS.md outranks `.agents/rules/` in
- * Antigravity's precedence: a stale legacy marker left behind would override the fresh file.
- * When codex/androidstudio are present the markers are (also) theirs and stay — they keep them
- * refreshed via their own installs, and this loader coexists with them untouched (their
- * record-driven pruning never lists a foreign id).
+ * marker that points Antigravity at `.agents/rules/`. Rules themselves live as files there, so
+ * AGENTS.md carries only this loader — which the other marker agents (codex / androidstudio)
+ * never touch, and which coexists with their own markers untouched.
  *
- * Called from both install and update (idempotent). Returns the removed legacy ids.
+ * Called from both install and update (idempotent).
  */
 export function maintainAntigravityProjectRulesFile(agentsPath = getAntigravityRulesFile('project')) {
   upsertRuleInAgentsMd(agentsPath, RULE_LOADING_ID, RULE_LOADING_CONTENT);
-  if (otherMarkerAgentsPresent()) return [];
-  const legacyIds = listWeeglooRuleMarkers(agentsPath).filter((id) => id !== RULE_LOADING_ID);
-  return removeRuleMarkers(agentsPath, legacyIds);
 }
 
 export async function installAntigravity({
@@ -284,10 +259,7 @@ export async function installAntigravity({
         }
       }
       if (scope === 'project') {
-        const cleaned = maintainAntigravityProjectRulesFile(rulesFile);
-        if (cleaned.length > 0) {
-          console.log(chalk.dim(`  - Migrated ${cleaned.length} legacy rule marker(s) out of AGENTS.md`));
-        }
+        maintainAntigravityProjectRulesFile(rulesFile);
       }
       rulesSpinner.succeed(
         `  Rules installed    ${chalk.dim(`(${rules.length})  → ${scope === 'project' ? rulesDir : rulesFile}`)}`

@@ -71,7 +71,7 @@ export function removeRuleFiles(rulesDir, ids, ext) {
 /**
  * Disk-detection helpers for the update flow. Detection is a cheap `weegloo-` prefix scan —
  * deliberately NOT catalog-limited, because the catalog needs the branch ref, the ref needs the
- * stamp, and a pre-migration install has no stamp (a circular dependency the prefix scan breaks).
+ * stamp, so the scan must not depend on one (a circular dependency the prefix scan breaks).
  * DESTRUCTIVE operations must then intersect these ids with a real catalog before acting, so a
  * user-authored `weegloo-foo` that happens to share the prefix is never touched.
  */

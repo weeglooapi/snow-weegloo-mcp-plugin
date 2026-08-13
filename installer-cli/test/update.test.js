@@ -46,7 +46,7 @@ test('planUpdate: auto-adds only items absent from the OLD catalog — deselecti
   assert.deepEqual(plan.newSkillIds, ['weegloo-new']);
 });
 
-test('planUpdate: empty prev catalog (legacy record) → no auto-add this cycle', () => {
+test('planUpdate: empty prev catalog (partial record) → no auto-add this cycle', () => {
   const plan = planUpdate({
     catalogSkillIds: ['weegloo-a', 'weegloo-new'],
     catalogRuleIds: [],
@@ -169,10 +169,11 @@ function seedClaude({ skills = [], rules = [], record = null, stamp = null } = {
   for (const id of rules) {
     fs.writeFileSync(path.join('.claude', 'rules', `${id}.md`), `${id} v1`, 'utf-8');
   }
-  if (record) {
-    fs.mkdirSync(path.join('.weegloo', 'claude'), { recursive: true });
-    fs.writeFileSync(path.join('.weegloo', 'claude', 'installed.json'), JSON.stringify(record), 'utf-8');
-  }
+  // An install always writes the per-agent record, so default to what it would have written:
+  // selection = the seeded set, catalog snapshot = the same set (nothing new since).
+  const rec = record ?? { skills, rules, availableSkills: skills, availableRules: rules };
+  fs.mkdirSync(path.join('.weegloo', 'claude'), { recursive: true });
+  fs.writeFileSync(path.join('.weegloo', 'claude', 'installed.json'), JSON.stringify(rec), 'utf-8');
   if (stamp) {
     fs.mkdirSync(path.join('.weegloo', 'claude'), { recursive: true });
     fs.writeFileSync(path.join('.weegloo', 'claude', 'version-check.json'), JSON.stringify(stamp), 'utf-8');
@@ -266,35 +267,6 @@ test('runUpdate: core rules are restored even after the user hand-deleted them',
   });
 });
 
-test('runUpdate: legacy flat record (pre per-agent) → resync without auto-add, catalog snapshotted', async () => {
-  await inTmpProject(async () => {
-    // Pre-migration state: files on disk + ONLY the legacy flat record; no per-agent dir at all.
-    seedClaude({ skills: ['weegloo-a', 'weegloo-gone'], rules: ['weegloo-version'] });
-    fs.mkdirSync('.weegloo', { recursive: true });
-    fs.writeFileSync(
-      '.weegloo/installed.json',
-      JSON.stringify({ skills: ['weegloo-a', 'weegloo-gone'], rules: ['weegloo-version'] }),
-      'utf-8'
-    );
-
-    const res = await runUpdate(
-      { update: true, agent: 'claude', scope: 'project', nonInteractive: true },
-      { loadResourcesFn: loadOk, ...quiet }
-    );
-
-    assert.equal(res.status, 'updated');
-    // no catalog back then → brand-new NOT auto-added this cycle
-    assert.equal(fs.existsSync('.claude/skills/weegloo-brandnew'), false);
-    // but the legacy record still drove pruning of the upstream-deleted skill
-    assert.equal(fs.existsSync('.claude/skills/weegloo-gone'), false);
-    // per-agent record now has the catalog snapshot → next cycle auto-adds precisely
-    const rec = readInstalledRecord('.weegloo/claude/installed.json');
-    assert.deepEqual(rec.availableSkills, ['weegloo-a', 'weegloo-b', 'weegloo-brandnew']);
-    // legacy file untouched (other agents' first migrations still need it)
-    assert.deepEqual(readJson('.weegloo/installed.json').skills, ['weegloo-a', 'weegloo-gone']);
-  });
-});
-
 test('runUpdate: manifest unavailable → nothing on disk is touched', async () => {
   await inTmpProject(async () => {
     seedClaude({
@@ -328,7 +300,7 @@ test('runUpdate: --branch flag overrides the stamp ref', async () => {
   });
 });
 
-test('runUpdate: no stamp ref (pre-migration) falls back to latest', async () => {
+test('runUpdate: a stamp with no ref falls back to latest', async () => {
   await inTmpProject(async () => {
     seedClaude({ skills: ['weegloo-a'] });
     let requestedRef = null;
@@ -375,6 +347,16 @@ function seedAndroidStudio() {
   fs.writeFileSync(path.join('.android-studio', 'skills', 'weegloo-a', 'SKILL.md'), 'a v1', 'utf-8');
   upsertRuleInAgentsMd(path.join(process.cwd(), 'AGENTS.md'), 'weegloo-version', 'v1 rule');
   fs.mkdirSync(path.join('.weegloo', 'androidstudio'), { recursive: true });
+  fs.writeFileSync(
+    path.join('.weegloo', 'androidstudio', 'installed.json'),
+    JSON.stringify({
+      skills: ['weegloo-a'],
+      rules: ['weegloo-version'],
+      availableSkills: ['weegloo-a'],
+      availableRules: ['weegloo-version'],
+    }),
+    'utf-8'
+  );
   fs.writeFileSync(
     path.join('.weegloo', 'androidstudio', 'version-check.json'),
     JSON.stringify({ last_check: 'x', version: 'v1', ref: 'latest' }),
@@ -554,37 +536,24 @@ test('runUpdate: full skills wipe with an intact record → everything restored'
 
 // ── antigravity project rules: .agents/rules files + AGENTS.md bootstrap loader ──
 
-test('maintainAntigravityProjectRulesFile: upserts the loader and migrates legacy markers when alone', async () => {
+test('maintainAntigravityProjectRulesFile: upserts the bootstrap loader, idempotently', async () => {
   await inTmpProject(async () => {
-    // Legacy antigravity install: full-rule markers in AGENTS.md, no other marker agent around.
-    upsertRuleInAgentsMd(path.join(process.cwd(), 'AGENTS.md'), 'weegloo-version', 'old full rule');
-    upsertRuleInAgentsMd(path.join(process.cwd(), 'AGENTS.md'), 'weegloo-global-rules', 'old full rule 2');
-
-    const cleaned = maintainAntigravityProjectRulesFile();
-
+    maintainAntigravityProjectRulesFile();
+    maintainAntigravityProjectRulesFile();
     const agents = fs.readFileSync('AGENTS.md', 'utf-8');
     assert.ok(agents.includes(`<!-- weegloo:${RULE_LOADING_ID} -->`), 'loader marker present');
     assert.ok(agents.includes('Rule Loading'), 'loader content present');
-    assert.deepEqual(cleaned.sort(), ['weegloo-global-rules', 'weegloo-version']);
-    assert.ok(!agents.includes('old full rule'), 'legacy full-rule markers migrated out');
-    // Idempotent: run again → loader still single, nothing else to clean.
-    assert.deepEqual(maintainAntigravityProjectRulesFile(), []);
-    const again = fs.readFileSync('AGENTS.md', 'utf-8');
-    assert.equal(again.split(`<!-- weegloo:${RULE_LOADING_ID} -->`).length - 1, 1, 'loader not duplicated');
+    assert.equal(agents.split(`<!-- weegloo:${RULE_LOADING_ID} -->`).length - 1, 1, 'loader not duplicated');
   });
 });
 
-test('maintainAntigravityProjectRulesFile: legacy markers are PRESERVED when another marker agent is hinted', async () => {
+test('maintainAntigravityProjectRulesFile: another agent\'s markers in AGENTS.md are left intact', async () => {
   await inTmpProject(async () => {
     upsertRuleInAgentsMd(path.join(process.cwd(), 'AGENTS.md'), 'weegloo-version', 'codex-owned full rule');
-    fs.mkdirSync(path.join('.weegloo', 'codex'), { recursive: true }); // codex tracking present
-
-    const cleaned = maintainAntigravityProjectRulesFile();
-
-    assert.deepEqual(cleaned, [], 'nothing removed — the markers may be codex/androidstudio property');
+    maintainAntigravityProjectRulesFile();
     const agents = fs.readFileSync('AGENTS.md', 'utf-8');
-    assert.ok(agents.includes('codex-owned full rule'), 'foreign-owned marker intact');
-    assert.ok(agents.includes(`<!-- weegloo:${RULE_LOADING_ID} -->`), 'loader still added alongside');
+    assert.ok(agents.includes('codex-owned full rule'), 'foreign-owned marker untouched');
+    assert.ok(agents.includes(`<!-- weegloo:${RULE_LOADING_ID} -->`), 'loader added alongside');
   });
 });
 
@@ -594,12 +563,11 @@ test('RULE_LOADING_CONTENT is agent-agnostic (no baked per-agent values)', () =>
   assert.ok(RULE_LOADING_CONTENT.includes('./.agents/rules/'), 'points at the project rules dir');
 });
 
-test('runUpdate: antigravity project — pre-migration markers are detected, rules land as files, loader installed', async () => {
+test('runUpdate: antigravity project — rules land as files, loader installed', async () => {
   await inTmpProject(async () => {
-    // Pre-migration antigravity project install: skills + rules-as-markers + per-agent record.
+    // Antigravity project install: skills + rules + per-agent record.
     fs.mkdirSync(path.join('.agents', 'skills', 'weegloo-a'), { recursive: true });
     fs.writeFileSync(path.join('.agents', 'skills', 'weegloo-a', 'SKILL.md'), 'a v1', 'utf-8');
-    upsertRuleInAgentsMd(path.join(process.cwd(), 'AGENTS.md'), 'weegloo-version', 'old marker rule');
     fs.mkdirSync(path.join('.weegloo', 'antigravity'), { recursive: true });
     fs.writeFileSync(
       path.join('.weegloo', 'antigravity', 'installed.json'),
@@ -628,10 +596,9 @@ test('runUpdate: antigravity project — pre-migration markers are detected, rul
     assert.ok(versionRule.includes('.weegloo/antigravity/version-check.json'), 'antigravity-baked');
     assert.ok(versionRule.includes('--agent antigravity'), 'antigravity update command');
     assert.ok(versionRule.startsWith('---\ntrigger: always_on\n'), 'Antigravity activation frontmatter injected');
-    // AGENTS.md: loader in, legacy full marker migrated out (no other marker agent seeded).
+    // AGENTS.md carries only the bootstrap loader that points at .agents/rules.
     const agents = fs.readFileSync('AGENTS.md', 'utf-8');
     assert.ok(agents.includes(`<!-- weegloo:${RULE_LOADING_ID} -->`));
-    assert.ok(!agents.includes('old marker rule'));
     // Skills untouched by the rules move.
     assert.equal(fs.readFileSync('.agents/skills/weegloo-a/SKILL.md', 'utf-8'), 'a v2');
   });

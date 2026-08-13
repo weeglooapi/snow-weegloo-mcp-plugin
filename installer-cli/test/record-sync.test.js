@@ -9,7 +9,6 @@ import {
   readInstalledRecord,
   writeInstalledRecord,
   getInstalledRecordPath,
-  getLegacyInstalledRecordPath,
   syncInstalledRecord,
 } from '../src/self-update.js';
 
@@ -33,9 +32,9 @@ const record = ({ skills = [], rules = [], availableSkills = [], availableRules 
   origins,
 });
 
-// ── record paths (per-agent, plus the read-only legacy flat path) ─────────────
+// ── record paths (per-agent) ──────────────────────────────────────────────────
 
-test('record path is per-agent; legacy flat path is a sibling (never written anymore)', () => {
+test('record path is per-agent', () => {
   assert.equal(
     getInstalledRecordPath('global', 'claude'),
     path.join(os.homedir(), '.weegloo', 'claude', 'installed.json')
@@ -43,14 +42,6 @@ test('record path is per-agent; legacy flat path is a sibling (never written any
   assert.equal(
     getInstalledRecordPath('project', 'codex', '/proj'),
     path.join('/proj', '.weegloo', 'codex', 'installed.json')
-  );
-  assert.equal(
-    getLegacyInstalledRecordPath('global'),
-    path.join(os.homedir(), '.weegloo', 'installed.json')
-  );
-  assert.equal(
-    getLegacyInstalledRecordPath('project', '/proj'),
-    path.join('/proj', '.weegloo', 'installed.json')
   );
 });
 
@@ -95,10 +86,10 @@ test('readInstalledRecord treats a missing/garbled/wrong-typed record as empty l
   });
 });
 
-// Backward compatibility: a legacy record (pre-catalog) has only skills/rules — the catalog keys
+// A hand-written or partial record may carry only skills/rules — the catalog keys
 // must default to empty lists, never an error. That empty catalog is exactly what the update flow
 // reads as "unknown offering" (→ no auto-add, no catalog-verified removal on the first cycle).
-test('readInstalledRecord: legacy record without catalog keys → catalog defaults to empty (no throw)', () => {
+test('readInstalledRecord: a record without catalog keys → catalog defaults to empty (no throw)', () => {
   withTmp('weegloo-record-', (root) => {
     const emptyObj = path.join(root, 'empty.json');
     fs.writeFileSync(emptyObj, '{}', 'utf-8');
@@ -157,7 +148,6 @@ test('syncInstalledRecord: a skill deleted upstream is removed on the next updat
       now: '2026-07-20T12:00:00',
       stampPath: stamp,
       recordPath: rec,
-      legacyRecordPath: path.join(root, 'no-legacy.json'),
       manageSkills: true,
       installedSkillIds: ['weegloo-keep'],
       removeSkills: (ids) => removeSkillDirs(skillsDir, ids),
@@ -187,7 +177,6 @@ test('syncInstalledRecord: a deselected (still-shipped) skill is also removed �
       now: '2026-07-20T12:00:00',
       stampPath: stamp,
       recordPath: rec,
-      legacyRecordPath: path.join(root, 'no-legacy.json'),
       manageSkills: true,
       installedSkillIds: ['weegloo-a'], // user deselected weegloo-b this run
       removeSkills: (ids) => removeSkillDirs(skillsDir, ids),
@@ -218,7 +207,6 @@ test('syncInstalledRecord: an unmanaged kind is left untouched (no removal, prio
       now: '2026-07-20T12:00:00',
       stampPath: stamp,
       recordPath: rec,
-      legacyRecordPath: path.join(root, 'no-legacy.json'),
       manageSkills: false, // e.g. --ignore-skill: do not touch skills at all
       installedSkillIds: [],
       removeSkills: () => {
@@ -257,7 +245,6 @@ test('syncInstalledRecord: first run against no record removes nothing and seeds
       now: '2026-07-20T12:00:00',
       stampPath: stamp,
       recordPath: rec,
-      legacyRecordPath: path.join(root, 'no-legacy.json'),
       manageSkills: true,
       installedSkillIds: ['weegloo-a'],
       removeSkills: (ids) => removeSkillDirs(skillsDir, ids),
@@ -282,7 +269,6 @@ test('syncInstalledRecord: stamps the installed version + branch ref for the rul
       now: '2026-07-20T12:00:00',
       stampPath: stamp,
       recordPath: path.join(root, 'installed.json'),
-      legacyRecordPath: path.join(root, 'no-legacy.json'),
       version: 'abc123',
       ref: 'develop',
       manageSkills: true,
@@ -306,7 +292,6 @@ test('syncInstalledRecord: records the offered catalog alongside the selection',
       now: '2026-07-20T12:00:00',
       stampPath: path.join(root, 'version-check.json'),
       recordPath: rec,
-      legacyRecordPath: path.join(root, 'no-legacy.json'),
       manageSkills: true,
       installedSkillIds: ['weegloo-a'], // user picked 1 of 2
       availableSkillIds: ['weegloo-a', 'weegloo-b'],
@@ -323,73 +308,5 @@ test('syncInstalledRecord: records the offered catalog alongside the selection',
         availableRules: ['weegloo-version', 'weegloo-r2'],
       })
     );
-  });
-});
-
-// Migration: an agent's FIRST per-agent run must still prune what the LEGACY flat record says was
-// installed but is gone from this run — otherwise upstream-deleted skills survive as orphans that
-// keep loading stale guidance. Foreign (other-agent) ids in the legacy record are harmless: the
-// removal callback is existence-checked inside THIS agent's own directories.
-test('syncInstalledRecord: no per-agent record yet → falls back to the legacy flat record for pruning', () => {
-  withTmp('weegloo-sync-', (root) => {
-    const rec = path.join(root, 'agent', 'installed.json'); // per-agent — does not exist yet
-    const legacy = path.join(root, 'installed.json'); // flat, shared by all agents pre-split
-    const skillsDir = path.join(root, 'skills');
-    for (const id of ['weegloo-gone', 'weegloo-keep']) fs.mkdirSync(path.join(skillsDir, id), { recursive: true });
-    // Legacy record: this agent had gone+keep; another agent's id is mixed in (shared file).
-    fs.writeFileSync(
-      legacy,
-      JSON.stringify({ skills: ['weegloo-gone', 'weegloo-keep', 'weegloo-other-agents'], rules: [] }),
-      'utf-8'
-    );
-
-    const res = syncInstalledRecord({
-      scope: 'global',
-      now: '2026-07-20T12:00:00',
-      stampPath: path.join(root, 'agent', 'version-check.json'),
-      recordPath: rec,
-      legacyRecordPath: legacy,
-      manageSkills: true,
-      installedSkillIds: ['weegloo-keep'], // upstream dropped weegloo-gone
-      removeSkills: (ids) => removeSkillDirs(skillsDir, ids),
-      manageRules: true,
-      installedRuleIds: [],
-    });
-
-    assert.deepEqual(res.removedSkills, ['weegloo-gone'], 'legacy prev pruned; foreign id was a no-op');
-    assert.equal(fs.existsSync(path.join(skillsDir, 'weegloo-gone')), false);
-    assert.equal(fs.existsSync(path.join(skillsDir, 'weegloo-keep')), true);
-    // The per-agent record is seeded; the legacy file is left byte-identical for other agents'
-    // own first migrations.
-    assert.deepEqual(readInstalledRecord(rec).skills, ['weegloo-keep']);
-    assert.deepEqual(readJson(legacy).skills, ['weegloo-gone', 'weegloo-keep', 'weegloo-other-agents']);
-  });
-});
-
-test('syncInstalledRecord: once a per-agent record exists, the legacy record is ignored', () => {
-  withTmp('weegloo-sync-', (root) => {
-    const rec = path.join(root, 'agent', 'installed.json');
-    const legacy = path.join(root, 'installed.json');
-    const skillsDir = path.join(root, 'skills');
-    fs.mkdirSync(path.join(skillsDir, 'weegloo-mine'), { recursive: true });
-    fs.mkdirSync(path.dirname(rec), { recursive: true });
-    fs.writeFileSync(rec, JSON.stringify({ skills: ['weegloo-mine'], rules: [] }), 'utf-8');
-    // Legacy claims a stale id — must NOT drive removal once the per-agent record exists.
-    fs.writeFileSync(legacy, JSON.stringify({ skills: ['weegloo-mine', 'weegloo-stale'], rules: [] }), 'utf-8');
-
-    const res = syncInstalledRecord({
-      scope: 'global',
-      now: '2026-07-20T12:00:00',
-      stampPath: path.join(root, 'agent', 'version-check.json'),
-      recordPath: rec,
-      legacyRecordPath: legacy,
-      manageSkills: true,
-      installedSkillIds: ['weegloo-mine'],
-      removeSkills: (ids) => removeSkillDirs(skillsDir, ids),
-      manageRules: true,
-      installedRuleIds: [],
-    });
-
-    assert.deepEqual(res.removedSkills, [], 'per-agent record wins; legacy no longer consulted');
   });
 });
