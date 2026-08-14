@@ -26,7 +26,7 @@ capability the frontend implies is **actually wired and live**. Hold the whole f
   as completed.**
 - **A deployable web app gets deployed.** If the integration target is a runnable static/SPA site and
   the user has not named another host, deploying it to **Weegloo WebHosting** and reporting the live
-  `…weegloo.app` URL is part of finishing — running it only locally is **not** a deliverable. (Skip the
+  `…sn-weegloo.app` URL is part of finishing — running it only locally is **not** a deliverable. (Skip the
   deploy *only* if the user specified another host, or the app genuinely cannot build to a static
   export — see `weegloo-web-hosting`.)
 - **The only legitimate reason to stop short of a wired-and-live capability is a blocking user-only

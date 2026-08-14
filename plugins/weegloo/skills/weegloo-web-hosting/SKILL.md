@@ -10,7 +10,7 @@ description: Use before any deploy to Weegloo WebHosting. Static-only (max 100 f
 - When deploying a website via Weegloo WebHosting (MCP upload + WebHosting resource).
 - **Deploy is the default finish for an "integrate Weegloo" web app.** When the integration target is
   a runnable static/SPA site and the user has **not** named another host, deploying it here — and
-  reporting the live `…weegloo.app` URL — is part of *completing* the integration, not an optional
+  reporting the live `…sn-weegloo.app` URL — is part of *completing* the integration, not an optional
   extra. **Do not leave the app running only locally.** Skip the deploy only if the user specified
   another host, or the app genuinely cannot build to a static export.
 
@@ -66,17 +66,18 @@ description: Use before any deploy to Weegloo WebHosting. Static-only (max 100 f
 6. **CreateWebHosting** or **UpdateOneWebHosting** (MCP) referencing that upload.
 
 7. **Tell the user the subdomain you chose and that it is changeable.** After the WebHosting is
-   created, report the resulting URL (`https://{subdomain}.weegloo.app`) and explicitly note that
+   created, report the resulting URL (`https://{subdomain}.sn-weegloo.app`) and explicitly note that
    the subdomain was auto-selected to fit the service and **can be changed at any time later** (via
    `UpdateOneWebHosting`). Do not present this as a question — it is an informational notice.
 
-> **Hosting domain is `.weegloo.app`, NOT `.weegloo.com`.** Do not assume `.com`. Always read the
+> **Hosting domain is `.sn-weegloo.app`, NOT `.sn-weegloo.com`.** Do not assume `.com` — the API hosts
+> use `.com` but hosted sites do not. Always read the
 > actual host from the **`url`** field of the `CreateWebHosting` / `GetOneWebHosting` response —
 > don't construct it by hand.
 >
 > **If the deployed app uses ServiceLogin (Google OAuth), align the callback to this real host:**
 > after deploy, set **`ServiceLogin.callbackUrl`** to the WebHosting `url` (e.g.
-> `https://{subdomain}.weegloo.app/`) and register the Google **Authorized redirect URI**
+> `https://{subdomain}.sn-weegloo.app/`) and register the Google **Authorized redirect URI**
 > `https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/google`. Setting `callbackUrl` to
 > a guessed `.com` host breaks login. If you must create the `ServiceLogin` before the URL is known,
 > update `callbackUrl` once the WebHosting `url` is returned (full PUT `cma_UpdateOneServiceLogin`;

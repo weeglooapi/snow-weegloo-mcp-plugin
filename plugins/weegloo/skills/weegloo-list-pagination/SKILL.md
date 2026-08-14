@@ -17,7 +17,7 @@ Successful **list** responses include a **`links`** object (alongside **`items`*
 ```json
 {
   "links": {
-    "self": "/v1/spaces/rNwYZmRS/medias?limit=40&order=-sys.updatedAt&..."
+    "self": "/v1/spaces/{spaceId}/medias?limit=40&order=-sys.updatedAt&..."
   }
 }
 ```

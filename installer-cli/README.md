@@ -214,7 +214,7 @@ Android Studio writes **both** MCP servers into `mcp.json` ([docs](https://devel
 
 ## Available Skills and Rules
 
-The full, current catalog (20+ skills, 7 rules) is shown in the interactive picker and lives in [`plugins/weegloo/`](https://github.com/weeglooapi/snow-weegloo-mcp-plugin/tree/latest/plugins/weegloo) — it changes with every release, so it is not duplicated here. One rule is core and always installed: `weegloo-version` (the update notifier).
+The full, current catalog (25 skills, 6 rules) is shown in the interactive picker and lives in [`plugins/weegloo/`](https://github.com/weeglooapi/snow-weegloo-mcp-plugin/tree/latest/plugins/weegloo) — it changes with every release, so it is not duplicated here. One rule is core and always installed: `weegloo-version` (the update notifier).
 
 ## Requirements
 
