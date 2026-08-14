@@ -220,7 +220,7 @@ Fields support **`validations`**; the CMA accepts the kinds summarized in **`Fie
 - **Location**: `{ "latitude": <number>, "longitude": <number> }` — use the **full** keys; **`lat`/`lng`/`lon` are rejected**. Example: `{ "ko-KR": { "latitude": 37.5662, "longitude": 126.9910 } }`.
 - **Refer**: the Refer shape `{ "sys": { "type": "Refer", "id": "<id>", "targetType": "Content" | "Media" } }` — **not** a bare id string.
 
-**The canonical, complete field-value spec lives in the API reference — read it rather than relying on this list:** https://docs.sn-weegloo.com/api/reference/cma/content (the `fields` per-locale map and `Refer` shape; locale-key rules in **`weegloo-default-locale`**). The notes above are only the high-frequency gotchas, not the full spec.
+**The canonical, complete field-value spec lives in the API reference — read it rather than relying on this list:** https://docs.sn-weegloo.com/api/reference/cma/content.md (the `fields` per-locale map and `Refer` shape; locale-key rules in **`weegloo-default-locale`**). The notes above are only the high-frequency gotchas, not the full spec.
 
 ---
 

@@ -90,7 +90,7 @@ conservative free-tier floor; paid tiers are larger.
   avoid a long upload that dies mid-stream. Since the exact cap is plan-specific, gate on a
   configured limit (or the free-tier floor) rather than guessing.
 - Exact per-plan limits are plan-defined and may change — confirm via the docs / pricing page
-  (`https://docs.sn-weegloo.com/pricing/pricing/`), don't assume.
+  (`https://docs.sn-weegloo.com/en-US/pricing/pricing/`), don't assume.
 - The plan **tier** is readable from the **Organization** (`sys.plan.sys.id`, e.g. `free`) — a Space
   has no plan field, so go Space → its Organization. But the tier id does **not** carry the numeric
   size cap, and per-Space overrides can diverge from the tier's nominal limit, so use it only as a
