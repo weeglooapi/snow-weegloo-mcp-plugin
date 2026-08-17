@@ -22,8 +22,8 @@
 import { readFileSync } from 'node:fs';
 
 const CMA_BASE = process.env.WEEGLOO_CMA_BASE || 'https://cma.sn-weegloo.com/v1';
-const SPACE_ID = process.env.WEEGLOO_SPACE_ID || '42EhgutI';
-const CONTENT_TYPE_ID = process.env.WEEGLOO_CONTENT_TYPE_ID || '3trmXRN5fEtDh8odpgvtQdZeNlImcH';
+const SPACE_ID = process.env.WEEGLOO_SPACE_ID || 'gaIn27tj';
+const CONTENT_TYPE_ID = process.env.WEEGLOO_CONTENT_TYPE_ID || '3trmXRM9Ttrgq6S1G0UPbMabiXQspM';
 const ANNOUNCEMENT_PATH = process.env.ANNOUNCEMENT_PATH || 'announcement.json';
 const TOKEN = process.env.WEEGLOO_CMA_TOKEN;
 
