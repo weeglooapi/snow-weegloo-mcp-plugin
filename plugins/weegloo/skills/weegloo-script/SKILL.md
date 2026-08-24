@@ -560,9 +560,10 @@ the field is `localized: true` — see `weegloo-default-locale`.
 
 ## Plan limits
 
-The number of Scripts per Space is **plan-limited** (illustrative: Free **3** / Basic **10** / Pro
-**50** / Enterprise unlimited). On a limit error (`WGL429*`), do not loop-retry — surface the upgrade
-path per `weegloo-global-rules`. Confirm current caps on the pricing page; do not hardcode.
+The number of Scripts per Space is **plan-limited**, as are the per-Script statement and external-call
+caps (limits table above). **The numbers are plan-defined and change — never hard-code them or quote
+one from memory; read the current cap off the pricing page.** On a limit error (`WGL429*`), do not
+loop-retry — surface the upgrade path per `weegloo-global-rules`.
 
 ## Related
 
