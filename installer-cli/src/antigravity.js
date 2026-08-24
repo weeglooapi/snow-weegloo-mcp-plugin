@@ -280,6 +280,7 @@ export async function installAntigravity({
       ref: pluginRef,
       version,
       origins,
+      repo: REPO,
       manageSkills,
       installedSkillIds,
       availableSkillIds,

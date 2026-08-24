@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { planUpdate, runUpdate } from '../src/update.js';
+import { REPO } from '../src/github.js';
 import { listWeeglooSkillDirs, listWeeglooRuleFiles, listWeeglooRuleMarkers } from '../src/io.js';
 import { upsertRuleInAgentsMd } from '../src/codex.js';
 import { readInstalledRecord } from '../src/self-update.js';
@@ -264,6 +265,62 @@ test('runUpdate: core rules are restored even after the user hand-deleted them',
 
     assert.ok(fs.existsSync('.claude/rules/weegloo-version.md'), 'deleted core rule came back');
     assert.ok(fs.existsSync('.claude/rules/weegloo-media-lifecycle.md'));
+  });
+});
+
+test('runUpdate: a record from a DIFFERENT plugin repo is refused, not overwritten', async () => {
+  // `weegloo` exists on more than one registry, so `npx weegloo@latest` can hand you a CLI whose
+  // REPO is another plugin repo. That run used to report a clean success while replacing every
+  // skill/rule — including the update command baked into the version rule, which then kept
+  // pointing at the other repo. One-way trap; hence the guard.
+  await inTmpProject(async () => {
+    seedClaude({
+      skills: ['weegloo-a'],
+      rules: ['weegloo-version'],
+      record: {
+        skills: ['weegloo-a'],
+        rules: ['weegloo-version'],
+        availableSkills: ['weegloo-a'],
+        availableRules: ['weegloo-version'],
+        repo: 'someone-else/other-plugin',
+      },
+      stamp: { last_check: 'x', version: 'v1', ref: 'latest' },
+    });
+    let fetched = false;
+    const res = await runUpdate(
+      { update: true, agent: 'claude', scope: 'project', nonInteractive: true },
+      { loadResourcesFn: async () => ((fetched = true), MANIFEST), ...quiet }
+    );
+
+    assert.equal(res.ok, false);
+    assert.equal(res.status, 'repo-mismatch');
+    assert.equal(fetched, false, 'refused before fetching — nothing to write from');
+    // Disk untouched: still the seeded v1 content.
+    assert.equal(fs.readFileSync('.claude/skills/weegloo-a/SKILL.md', 'utf-8'), 'weegloo-a v1');
+    assert.equal(readInstalledRecord('.weegloo/claude/installed.json').repo, 'someone-else/other-plugin');
+  });
+});
+
+test('runUpdate: a record with no repo is adopted (arms the guard for next time)', async () => {
+  await inTmpProject(async () => {
+    seedClaude({
+      skills: ['weegloo-a'],
+      rules: ['weegloo-version'],
+      record: {
+        skills: ['weegloo-a'],
+        rules: ['weegloo-version'],
+        availableSkills: ['weegloo-a'],
+        availableRules: ['weegloo-version'],
+      },
+      stamp: { last_check: 'x', version: 'v1', ref: 'latest' },
+    });
+    const res = await runUpdate(
+      { update: true, agent: 'claude', scope: 'project', nonInteractive: true },
+      { loadResourcesFn: loadOk, ...quiet }
+    );
+
+    assert.equal(res.status, 'updated');
+    assert.equal(readInstalledRecord('.weegloo/claude/installed.json').repo, REPO);
   });
 });
 

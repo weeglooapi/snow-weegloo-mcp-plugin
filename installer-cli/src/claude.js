@@ -172,6 +172,7 @@ export async function installClaude({
       ref: pluginRef,
       version,
       origins,
+      repo: REPO,
       manageSkills,
       installedSkillIds,
       availableSkillIds,

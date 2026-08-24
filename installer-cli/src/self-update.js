@@ -214,6 +214,9 @@ export function readInstalledRecord(recordPath) {
     availableSkills: list(s.availableSkills),
     availableRules: list(s.availableRules),
     origins,
+    // repo: which plugin repo this content came from. Absent on records written before it was
+    // tracked — the update flow treats that as "unknown" and adopts, rather than refusing.
+    repo: typeof s.repo === 'string' && s.repo ? s.repo : null,
   };
 }
 
@@ -231,6 +234,7 @@ export function writeInstalledRecord(recordPath, record = {}) {
     for (const key of ['skills', 'rules', 'availableSkills', 'availableRules']) {
       if (Array.isArray(record[key])) next[key] = record[key];
     }
+    if (typeof record.repo === 'string' && record.repo) next.repo = record.repo;
     // origins is set/removed EXPLICITLY (not merge-preserved): a reinstall without --origins is
     // the sanctioned way back to production, so a stale mapping must not survive it.
     if ('origins' in record) {
@@ -309,6 +313,7 @@ export function projectMarkerRuleSharers(agent, cwd = process.cwd()) {
  *   now?: string,
  *   stampPath?: string,
  *   recordPath?: string,
+ *   repo?: string|null,
  *   version?: string|null,
  *   ref?: string|null,
  *   manageSkills: boolean,
@@ -331,6 +336,7 @@ export function syncInstalledRecord({
   version = null,
   ref = null,
   origins = null,
+  repo = null,
   manageSkills,
   installedSkillIds = [],
   availableSkillIds = [],
@@ -357,6 +363,7 @@ export function syncInstalledRecord({
     availableSkills: manageSkills ? availableSkillIds : prev.availableSkills,
     availableRules: manageRules ? availableRuleIds : prev.availableRules,
     origins, // 설치의 속성 — 매 실행 명시적으로 set/remove (writeInstalledRecord 참조)
+    repo, // 이 콘텐츠의 출처 리포 — update가 다른 배포본인지 판정하는 근거
   });
   const stampWritten = writeVersionStamp(stampPath, { now, version, ref });
 

@@ -183,6 +183,7 @@ export async function installCursor({
       ref: pluginRef,
       version,
       origins,
+      repo: REPO,
       manageSkills,
       installedSkillIds,
       availableSkillIds,

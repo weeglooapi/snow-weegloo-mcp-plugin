@@ -410,6 +410,7 @@ export async function installCodex({
       ref: pluginRef,
       version,
       origins,
+      repo: REPO,
       manageSkills,
       installedSkillIds,
       availableSkillIds,

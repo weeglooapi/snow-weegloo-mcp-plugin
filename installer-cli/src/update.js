@@ -280,6 +280,25 @@ export async function runUpdate(config, deps = {}) {
     return { ok: true, status: 'nothing-installed' };
   }
 
+  // ── Source guard: this build must not update content another build installed ────────────────
+  // `weegloo` exists on more than one registry, so `npx weegloo@latest` can resolve to a CLI whose
+  // REPO is a different plugin repo. Without this check that run reports a clean success while
+  // swapping every skill/rule for the other repo's — including the update command baked into the
+  // version rule, which then keeps pointing at that repo. Refuse instead: an update refreshes an
+  // install, it never migrates it to another source. A record with no `repo` predates this field,
+  // so it is adopted rather than refused.
+  if (prev.repo && prev.repo !== REPO) {
+    log(chalk.red('  ✖  ') + `This install came from a different plugin repo — refusing to overwrite it.`);
+    log(chalk.dim(`     installed from : ${prev.repo}`));
+    log(chalk.dim(`     this build uses: ${REPO}`));
+    log('');
+    log(chalk.dim('     You are almost certainly running the wrong build of the installer.'));
+    log(chalk.dim(`     To update this install, run: ${NPX_PREFIX} weegloo@latest --agent ${agent} --location ${scope} --update`));
+    log(chalk.dim('     To deliberately switch source, reinstall (without --update) instead.'));
+    log('');
+    return { ok: false, status: 'repo-mismatch' };
+  }
+
   // ── Resolve the branch: pinned flag > this agent's stamp > latest ───────────────────────────
   const stampPath = getVersionStampPath(scope, agent);
   const stamp = readJsonSafe(stampPath);
@@ -411,6 +430,7 @@ export async function runUpdate(config, deps = {}) {
     version: resources.version,
     ref,
     origins,
+    repo: REPO, // stamps the source on records that predate the field, arming the guard next time
     manageSkills: effectiveManageSkills,
     installedSkillIds: plan.addSkillIds,
     availableSkillIds: catalogSkillIds,

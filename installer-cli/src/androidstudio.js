@@ -220,6 +220,7 @@ export async function installAndroidStudio({
       ref: pluginRef,
       version,
       origins,
+      repo: REPO,
       manageSkills,
       installedSkillIds,
       availableSkillIds,
