@@ -187,8 +187,10 @@ whenever one of these fits. These are the situations an AI agent should map to S
 
 Every statement carries a **`type`** (the discriminator — **always include it**) and an optional
 **`name`** that binds its result into the context as `{ /<name>/… }` for later statements. On
-resource statements, **`resource`** is **`Content` | `Media`**. Statements run top-to-bottom and stop
-at `Return`.
+resource statements, **`resource`** is **`Content` | `Media`** — plus **`ServiceUser`** on the **read**
+statements only (`ResourceRead`/`ResourceFind`/`ResourceForEach`): ServiceUser is read-only (no mutation
+statement accepts it), and reading it requires the `SETTING_SERVICE_LOGIN` settings permission. Statements
+run top-to-bottom and stop at `Return`.
 
 ### Control flow
 
@@ -280,7 +282,8 @@ All three are **pure computation and short-running**, so a Script that only veri
     (either case), base64, or base64url, padded or not**. Do not look for an `encoding` field.
   - **`secretEncoding` is not optional guesswork** — a key issued hex- or base64-encoded is a
     *different key* when used as text, and the code it produces looks valid but never matches.
-    Adyen issues hex; Standard Webhooks / PortOne V2 / Svix issue base64.
+    Read how the provider issued the key from its own docs - a key handed over as hex or base64 is
+    common, and it is not inferable from the string.
   - **Failure is split by who supplies the input.** A missing or mismatched `expected` is **`false`**,
     not an error (so a missing header and a wrong one are one outcome); an empty message is
     authenticated as the empty message; only a blank **`secret`** — your own authoring — is a `400`.
@@ -288,7 +291,7 @@ All three are **pure computation and short-running**, so a Script that only veri
 - **`Hash`** — unkeyed digest, binds the **`String`**. `algorithm` (`MD5`|`SHA1`|`SHA256`|`SHA384`|
   `SHA512` — `MD5` only to reproduce an older scheme), `value`, `encoding` (`Hex` **default**|
   `HexUpper`|`Base64`|`Base64Url`). For schemes that hash a shared secret *with* the message
-  (`SHA256(fields… + merchantKey)`, common in Korean PGs) — **there is no `secret` field**: write the
+  (`SHA256(fields… + sharedKey)`) — **there is no `secret` field**: write the
   secret into `value` in whatever position that scheme puts it, which is the only form that expresses
   every position. Compare with `$===`.
 - **`Regex`** — how text is taken apart, since the operator vocabulary can join (`cat`) and test
@@ -303,10 +306,10 @@ All three are **pure computation and short-running**, so a Script that only veri
     that would never have been taken.
 
 ```jsonc
-// Stripe-shaped: unpack the packed header, then verify over "{timestamp}.{body}"
+// A header packing `t=<timestamp>,v1=<hex>`: unpack it, then verify over "{timestamp}.{body}"
 { "type": "Regex", "name": "sig", "mode": "Capture",
-  "pattern": "^t=(\\d+),v1=([0-9a-f]{64})$", "value": "{ /headers/stripe-signature }" },
-{ "type": "Signature", "name": "verified", "algorithm": "SHA256", "secret": "{ /vars/whsec }",
+  "pattern": "^t=(\\d+),v1=([0-9a-f]{64})$", "value": "{ /headers/x-provider-signature }" },
+{ "type": "Signature", "name": "verified", "algorithm": "SHA256", "secret": "{ /vars/signingSecret }",
   "value": "{ /sig/1 }.{ /rawPayload }", "expected": "{ /sig/2 }" },
 { "type": "If", "condition": { "!": "{ /verified }" },
   "then": [ { "type": "Return", "isError": true, "statusCode": 401, "value": "bad signature" } ] }
@@ -438,7 +441,7 @@ Any string value may embed a pointer. Roots:
 |------|-------------|
 | `/payload` | the JSON body passed to `/execute` — e.g. `{ /payload/fields/prompt }` |
 | `/rawPayload` | that same body as the caller's **own text, before parsing** — the only form a signature can be checked against (`Signature.value`) |
-| `/headers` | request HTTP headers, **keys lower-cased** — e.g. `{ /headers/authorization }`, `{ /headers/stripe-signature }` |
+| `/headers` | request HTTP headers, **keys lower-cased** — e.g. `{ /headers/authorization }`, `{ /headers/x-provider-signature }` |
 | `/now` | when the run started: **`/now/seconds`**, **`/now/millis`** (epoch) and **`/now/iso`** |
 | `/<name>` | the result of an earlier statement with that `name` — e.g. `{ /resp/body/... }`, `{ /post/sys/id }` |
 | `/vars/<name>` | a `SetVar` variable — e.g. `{ /vars/total }` |
@@ -509,7 +512,7 @@ short-running type — an unknown statement type is Async-only by default.
 | Sync timeout | **10s**, fixed |
 | Async timeout | **computed**: `min(30s + Σ declared, 180s)` |
 | Max statements / max external I/O ops | **per-plan** (see below) |
-| Max `SetVar` | **5** |
+| Max `SetVar` | **10** |
 | `Http` retry cap | **2** |
 | Per-`Http` `timeoutMs` cap | **60s** (omitted ⇒ 30s) |
 | Per-`EmailSend` `timeoutMs` cap | **30s** |
@@ -528,10 +531,11 @@ short-running type — an unknown statement type is Async-only by default.
 > save is rejected for exceeding one, the caller simplifies the Script or upgrades the plan.
 
 **Save-time validation** also enforces: `executionMode` must be `Async` if any statement does external
-I/O or iterates; a statement **block may not be empty**; binding **`name`**s must be non-blank, unique,
-free of `/` and `~`, and not a reserved root (`payload`/`rawPayload`/`headers`/`now`/`vars`/`error`);
-and — when **`anonymousCallEnabled`** is true — no `:self` filter (**`WGL400061`**) and
-`executionMode` **`Sync`** (**`WGL400062`**).
+I/O or iterates; a **`ResourceForEach` `onEach` block may not be empty** (empty `If`/`Loop`/`Try`/`Parallel`
+bodies are allowed); binding **`name`**s must match **`^[a-zA-Z0-9_-]+$`** (letters, digits, `_`, `-` only —
+so no `/` or `~`, and also no dots, spaces, or other punctuation), be unique, and not a reserved root
+(`payload`/`rawPayload`/`headers`/`now`/`vars`/`error`); and — when **`anonymousCallEnabled`** is true —
+no `:self` filter (**`WGL400061`**) and `executionMode` **`Sync`** (**`WGL400062`**).
 
 **The resolved-length caps above are checked when the statement runs, not at save** — they bound the
 message a `Signature`/`Hash` actually authenticates and the text a `Regex` scans, and those lengths are
