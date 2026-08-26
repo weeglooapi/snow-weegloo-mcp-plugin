@@ -1,6 +1,6 @@
 ---
 name: weegloo-service-login-sdk
-description: How to add Weegloo ServiceLogin (OAuth 2.0 — Google, GitHub, Facebook, GitLab, LINE, Kakao, Naver, or connect — the internal NEOID SSO) sign-in to a browser app — the official npm SDK `weegloo-service-user` (vanilla JS, 0 deps) and the underlying `auth.sn-weegloo.com` HTTP wire protocol (login redirect, exchangeToken POST, refresh, logout), all parameterized by `{provider}`, inferred from the product (not asked, and with no built-in default — never reflexively reach for Google, and never apply one provider's console steps to another). Covers the entry-URL vs provider redirect-URI confusion, ACMA current user at GET https://acma.sn-weegloo.com/v1/me (not /spaces/{spaceId}/me), the browser GET-with-body limitation, and the `exchangeToken` URL-stripping security pattern. This is the provider-agnostic spine; detailed per-provider console steps live in dedicated skills for Google (`weegloo-service-login-google`), GitHub (`weegloo-service-login-github`), Kakao (`weegloo-service-login-kakao`), Naver (`weegloo-service-login-naver`), LINE (`weegloo-service-login-line`), and connect (`weegloo-service-login-connect` — also asked for as NSS / NEOID / 커넥트); Facebook and GitLab follow the same generic shape described here (no dedicated skill). connect is the one provider that departs from the shape below — its callback URL is registered on a different host and it needs a third credential, `clientName`. Use when wiring sign-in for a Weegloo Space's product, debugging the OAuth callback flow, or implementing the protocol where the JS SDK cannot run (server-side, native mobile, scripts). For native apps (Android/iOS), also covers the `callbackUrl` http/https-only limit (no custom deep-link scheme) and the Weegloo WebHosting bridge page that redirects the OAuth callback into the app's deep link.
+description: How to add Weegloo ServiceLogin (OAuth 2.0 — Google, GitHub, Facebook, GitLab, LINE, Kakao, Naver, or connect — the internal NEOID SSO) sign-in to a browser app — the official npm SDK `weegloo-service-user` (vanilla JS, 0 deps) and the underlying `auth.sn-weegloo.com` HTTP wire protocol (login redirect, exchangeToken POST, refresh, logout), all parameterized by `{provider}`, inferred from the product (not asked, and with no built-in default — never reflexively reach for Google, and never apply one provider's console steps to another). Covers the entry-URL vs provider redirect-URI confusion, ACMA current user at GET https://acma.sn-weegloo.com/v1/me (not /spaces/{spaceId}/me), the browser GET-with-body limitation, and the `exchangeToken` URL-stripping security pattern. This is the provider-agnostic spine; detailed per-provider console steps live in dedicated skills for Google (`weegloo-service-login-google`), GitHub (`weegloo-service-login-github`), Kakao (`weegloo-service-login-kakao`), Naver (`weegloo-service-login-naver`), LINE (`weegloo-service-login-line`), and connect (`weegloo-service-login-connect` — also asked for as NSS / NEOID / 커넥트); Facebook and GitLab follow the same generic shape described here (no dedicated skill). connect is the one provider that departs from the shape below — it needs NO console setup at all (shared credentials are already registered, so ask the user for nothing) and it takes a third credential, `clientName`. Use when wiring sign-in for a Weegloo Space's product, debugging the OAuth callback flow, or implementing the protocol where the JS SDK cannot run (server-side, native mobile, scripts). For native apps (Android/iOS), also covers the `callbackUrl` http/https-only limit (no custom deep-link scheme) and the Weegloo WebHosting bridge page that redirects the OAuth callback into the app's deep link.
 ---
 
 # Weegloo - ServiceLogin SDK / OAuth wire protocol
@@ -207,13 +207,16 @@ only the console-specific clicks differ — those live in a per-provider skill *
    **Authorized redirect URI** = `https://auth.sn-weegloo.com/v1/spaces/{spaceId}/login/oauth2/code/{provider}`
    (the `/code/` form — hit by the provider → Weegloo, not the browser; pitfall **A**).
    **Deploy-independent — set it now** (pitfall **G**). Then copy that provider's `clientId` /
-   `clientSecret`. **Exception — `connect`:** the URL registered there must use the host
-   `auth-sn-weegloo.navercorp.com` instead, and connect also needs a third value, `clientName`
+   `clientSecret`. **Exception — `connect` skips this whole step:** its NEOID service is already
+   registered platform-side, so there is no console to visit and no URL to register
    (see **`weegloo-service-login-connect`**). The browser entry URL is unaffected.
 2. **Weegloo Console → ServiceLogin:**
    - `clientId` / `clientSecret` from the provider's OAuth client above (**plus `clientName` for
      `connect` only** — no other provider takes it). **Blocking user-only inputs — ask the user for them
      (via the per-provider walkthrough) and do not report sign-in as done without them (pitfall G).**
+     **Exception — `connect`:** these are shared values you look up in the docs yourself, so **ask the
+     user for nothing** and never treat connect as blocked-pending-credentials
+     (see **`weegloo-service-login-connect`**).
    - `defaultRole` → `Refer` to a least-privilege `ServiceUserRole` (create it first).
    - `callbackUrl` → a URL on **your product** that the SDK can intercept (Weegloo will redirect the
      browser there with `?exchangeToken=...`). **Deploy-dependent** — if the app is not deployed yet,
@@ -232,7 +235,7 @@ only the console-specific clicks differ — those live in a per-provider skill *
 | LINE     | `line`     | **`weegloo-service-login-line`** (detailed walkthrough) |
 | Facebook | `facebook` | follow *the shape* above; look up Facebook's current app-console steps (no detailed sub-skill yet) |
 | GitLab   | `gitlab`   | follow *the shape* above; look up GitLab's current app-console steps (no detailed sub-skill yet) |
-| connect (internal NEOID SSO — a.k.a. **NSS** / NEOID / 커넥트) | `connect` | **`weegloo-service-login-connect`** (detailed walkthrough — different callback host, extra `clientName`) |
+| connect (internal NEOID SSO — a.k.a. **NSS** / NEOID / 커넥트) | `connect` | **`weegloo-service-login-connect`** (**zero setup** — shared credentials, no console step, ask the user nothing; extra `clientName`) |
 
 **Infer the provider from the product — do not ask the user to pick one** (per `weegloo-platform-integration`'s
 no-scoping-questions policy). If the product names/implies a specific provider, use it; if it doesn't,
