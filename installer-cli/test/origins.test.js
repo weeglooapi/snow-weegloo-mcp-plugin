@@ -63,7 +63,7 @@ test('normalizeOrigins: a host-boundary prefix on the same domain is allowed (de
   // The collision check uses the same boundary rule as the substitution, so `dev-cma…` is not
   // "containing" `cma.sn-weegloo.com` — a plain includes() rejected the whole dev stack.
   const dev = Object.fromEntries(
-    ['cma', 'cda', 'acma', 'acda', 'upload', 'auth', 'console', 'ai']
+    ['cma', 'cda', 'acma', 'acda', 'upload', 'script', 'auth', 'console', 'ai']
       .map((s) => [s, `https://dev-${s}.weegloo.com`])
   );
   assert.deepEqual(normalizeOrigins(dev), dev);
@@ -174,11 +174,11 @@ test('originsEqual: order-insensitive equality, null ≡ empty', () => {
   assert.equal(originsEqual(a, { ...a, cma: 'https://other.acme.com' }), false);
 });
 
-test('MAPPABLE_SERVICES: exactly the 8 decided services', () => {
-  assert.deepEqual(Object.keys(MAPPABLE_SERVICES), ['cma', 'cda', 'acma', 'acda', 'upload', 'auth', 'console', 'ai']);
+test('MAPPABLE_SERVICES: exactly the 9 decided services', () => {
+  assert.deepEqual(Object.keys(MAPPABLE_SERVICES), ['cma', 'cda', 'acma', 'acda', 'upload', 'script', 'auth', 'console', 'ai']);
 });
 
-// acma ⊃ cma, acda ⊃ cda — 8개 호스트는 상호 비중첩이 아니어서 단순 replaceAll이면
+// acma ⊃ cma, acda ⊃ cda — 호스트들은 상호 비중첩이 아니어서 단순 replaceAll이면
 // cma 매핑이 acma까지 오염시킨다. 경계 검사(hostPattern)가 그걸 막는지가 이 테스트.
 test('applyOriginMapping: boundary guard — mapping cma must NOT bleed into acma (and cda into acda)', () => {
   const input = 'acma.sn-weegloo.com and cma.sn-weegloo.com; https://acda.sn-weegloo.com/v1 vs https://cda.sn-weegloo.com/v1';
