@@ -84,9 +84,21 @@ function parseArgs(argv) {
   return { command: positionals[0] || 'preflight', opts };
 }
 
+/**
+ * Windows npm is `npm.cmd`, a batch shim: a bare `npm` is not a file (ENOENT) and, since the
+ * CVE-2024-27980 fix, Node refuses to spawn a .cmd/.bat at all without `shell: true` (EINVAL).
+ * Either way spawnSync returns an EMPTY stderr — which this script read as "token wrong/expired"
+ * and as "never published", the second one quietly turning a REQUIRED bump into a no-bump
+ * publish. So npm goes through the shell on win32. Git is a real .exe and is deliberately left
+ * alone, so its arguments never pass through cmd.exe quoting.
+ * (io.js solves the same shim problem with `cmd /c npx` for the upload server.)
+ */
+const NPM_NEEDS_SHELL = process.platform === 'win32';
+
 /** Run a command, capturing output. Never throws; returns { code, stdout, stderr }. */
 function run(cmd, args, { env = process.env, cwd = PACKAGE_ROOT } = {}) {
-  const r = spawnSync(cmd, args, { cwd, env, encoding: 'utf8' });
+  const shell = cmd === 'npm' && NPM_NEEDS_SHELL;
+  const r = spawnSync(cmd, args, { cwd, env, encoding: 'utf8', shell });
   return {
     code: r.status ?? (r.error ? -1 : 0),
     stdout: (r.stdout || '').trim(),
@@ -211,7 +223,13 @@ function preflight(opts) {
     const view = run('npm', ['view', packageName, 'version', ...registryFlag], { env: authEnv });
     if (view.code === 0 && view.stdout) published = view.stdout;
     else if (/E404|is not in this registry|404/.test(view.stderr)) published = null; // never published
-    else if (view.stderr) warnings.push(`could not read published version: ${view.stderr.split('\n')[0]}`);
+    else {
+      // Neither a version nor a definitive 404 ⇒ the published version is UNKNOWN. Leaving it
+      // null would classify as "first publish" and skip the bump this release actually needs,
+      // so refuse rather than guess (this is how a silent spawn failure used to slip through).
+      const why = view.stderr.split('\n')[0] || view.error?.code || `npm exited ${view.code} with no output`;
+      blockers.push(`could not read the published version of ${packageName}: ${why}`);
+    }
   }
 
   const versionState = classifyVersion(current, published);
@@ -422,7 +440,7 @@ function main() {
       console.log(`${MARK.ok} bumped   package.json → ${c.bold(step.to)} ${c.dim('(uncommitted — the skill commits it)')}`);
     } else if (step.type === 'test') {
       console.log(`${MARK.info} test     running \`npm test\`…`);
-      const t = spawnSync('npm', ['test'], { cwd: PACKAGE_ROOT, stdio: 'inherit' });
+      const t = spawnSync('npm', ['test'], { cwd: PACKAGE_ROOT, stdio: 'inherit', shell: NPM_NEEDS_SHELL });
       if (t.status !== 0) {
         console.error(c.red('tests failed — aborting before publish.'));
         process.exit(1);
@@ -444,7 +462,7 @@ function main() {
       const { token } = findNpmToken();
       const env = token && s.tokenSource?.startsWith('NPM_TOKEN') ? { ...process.env, NPM_TOKEN: token } : process.env;
       console.log(`\n${MARK.info} publish  npm ${step.args.join(' ')}`);
-      const pub = spawnSync('npm', step.args, { cwd: PACKAGE_ROOT, env, stdio: 'inherit' });
+      const pub = spawnSync('npm', step.args, { cwd: PACKAGE_ROOT, env, stdio: 'inherit', shell: NPM_NEEDS_SHELL });
       if (pub.status !== 0) {
         console.error(c.red(`\npublish failed. Check that ${s.whoami || 'this account'} may publish ${s.packageName} to ${s.registry || 'the default registry'}` +
           (isPublicRegistry(s.registry) ? ', and if it demanded an OTP use a Granular/Automation token.' : ' (a repository that already holds a version cannot be overwritten).')));
