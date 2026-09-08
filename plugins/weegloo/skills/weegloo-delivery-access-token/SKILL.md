@@ -1,6 +1,6 @@
 ---
 name: weegloo-delivery-access-token
-description: Create Weegloo DeliveryAccessToken (CDA) via CMA-bind role.sys.id to the intended least-privilege SpaceRole only; never Administrator or first list item; handle WGL422001 without fallback. Skill text in English only.
+description: Create Weegloo DeliveryAccessToken (CDA) via CMA-bind role.sys.id to the intended least-privilege SpaceRole only; never Administrator or first list item; handle WGL422001 without fallback. ALSO covers allowedReferrers — the optional origin restriction, which is off by default and set only when the user asks to lock a token to a domain. Skill text in English only.
 ---
 
 # Weegloo Delivery Access Token (CDA)
@@ -44,6 +44,16 @@ description: Create Weegloo DeliveryAccessToken (CDA) via CMA-bind role.sys.id t
 
 ---
 
+## Restricting where the token may be used (`allowedReferrers`)
+
+A token may carry **`allowedReferrers`**, an optional list of origins it is accepted from. **Do not set it unless the user explicitly asks to restrict the token by domain.** The bound role is the security boundary; provisioning without an origin list is the normal outcome.
+
+When they do ask, tell them the cost first: it pins the token to the origins as they are today, so a custom domain registered later, a changed WebHosting subdomain, a new preview or staging host, or local development on another port **refuses every request** — and with the token still valid and its role unchanged, nothing about the failure points at the cause.
+
+Whatever set it, **resend the existing list whenever you update a token for any other reason**: an update replaces the whole field, so omitting it silently clears a restriction someone deliberately put there.
+
+---
+
 ## Error `WGL422001` (cannot assign permission you do not own)
 
 If **`cma_CreateDeliveryAccessToken`** fails with an ownership / permission error while using the **correct** least-privilege **`SpaceRole`**:
@@ -62,18 +72,7 @@ Do **not** treat Administrator as an acceptable workaround for **public, browser
 3. **`sys.id`** from the **create response** → pass into **`cma_CreateDeliveryAccessToken`** as **`role.sys.id`**.
 4. If step 3 fails with **`WGL422001`**: follow the section above-**no** Administrator fallback.
 
----
-
-## MCP tools (typical)
-
-| Step | MCP tool |
-|------|----------|
-| List roles | `cma_GetListSpaceRoles` |
-| Inspect one role | `cma_GetOneSpaceRole` |
-| Create least-privilege role | `cma_CreateSpaceRole` |
-| Create token | `cma_CreateDeliveryAccessToken` |
-
-Schema: **`weegloo-api-endpoints`** → CMA OpenAPI (**`CreateDeliveryAccessToken`**).
+Request/response shapes: **`weegloo-api-endpoints`** → CMA OpenAPI (**`CreateDeliveryAccessToken`**).
 
 ---
 
