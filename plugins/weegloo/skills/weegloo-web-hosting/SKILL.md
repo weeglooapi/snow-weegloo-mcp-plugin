@@ -33,6 +33,21 @@ description: Use before any deploy to Weegloo WebHosting. Static-only (max 300 f
 
 ---
 
+## Client-side navigation (do not make the screen flicker)
+
+A hand-rolled static/SPA site flickers when **every internal link re-loads the whole document** —
+blank page → spinner → header → body → footer, with all scripts re-run each time. Build it so it
+does not, by default:
+
+1. **Intercept internal links** and navigate with **`history.pushState`**, swapping **only the main
+   content region** — never the whole page. Handle back/forward with **`popstate`**.
+2. **Render header/footer once at boot**, then on navigation only replace the content and update the
+   active-nav highlight. Re-drawing chrome per route makes the layout jump.
+3. **Exception — leave these as real document loads:** the ServiceLogin OAuth callback and a payment
+   return URL. Those genuinely re-open the document (`weegloo-service-login-sdk`, `weegloo-payment`).
+
+---
+
 ## Static export and client configuration
 
 **Weegloo WebHosting has no per-request server or platform-managed runtime env file.** Anything the browser needs (CDA base URL, Space id, locale, Delivery Access Token, etc.) must be supplied by **your build** (e.g. `NEXT_PUBLIC_*` at build time), **separate builds per deploy**, or another **project-defined** pattern. Document the real approach in **`.env.example`** and the project README—see **`weegloo-api-endpoints`** for API bases and token rules.
@@ -69,6 +84,9 @@ description: Use before any deploy to Weegloo WebHosting. Static-only (max 300 f
    created, report the resulting URL (`https://{subdomain}.sn-weegloo.app`) and explicitly note that
    the subdomain was auto-selected to fit the service and **can be changed at any time later** (via
    `UpdateOneWebHosting`). Do not present this as a question — it is an informational notice.
+   Changing it — or registering a custom domain — changes the site's **origin**, so anything pinned
+   to the old one must be updated with it: the OAuth callback below, and any token carrying
+   **`allowedReferrers`** (a stale list refuses every call while the token itself stays valid).
 
 > **Hosting domain is `.sn-weegloo.app`, NOT `.sn-weegloo.com`.** Do not assume `.com` — the API hosts
 > use `.com` but hosted sites do not. Always read the

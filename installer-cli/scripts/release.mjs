@@ -317,7 +317,7 @@ export function bumpVersion(current, level) {
  * @param {{bump?:string, yes?:boolean, tests?:boolean}} [p.opts]
  * @returns {{ steps: Array<object>, exit: number, reason: string, version: string }}
  *   reason ∈ blocked | bump-required | bad-bump | plan | publish
- *   step.type ∈ bump | test | skip-test | plan | publish
+ *   step.type ∈ bump | test | skip-test | build | plan | publish
  */
 export function planRelease({ verdict, current, distTag, registry = null, opts = {} }) {
   if (verdict === 'BLOCKED') {
@@ -338,6 +338,12 @@ export function planRelease({ verdict, current, distTag, registry = null, opts =
   }
 
   steps.push(opts.tests === false ? { type: 'skip-test' } : { type: 'test' });
+
+  // The published package must carry ZERO runtime dependencies: installs are pinned to the
+  // internal `npm-local` registry, which cannot serve the public packages the sources import
+  // (see scripts/bundle.mjs). So the bundle is built — and smoke-tested — BEFORE the publish
+  // gate, where a failure costs nothing, rather than inside `npm publish` via prepack.
+  steps.push({ type: 'build' });
 
   // Gate 2 — publish. Without --yes we only plan (dry run).
   // `--registry` is spelled out even though publishConfig already sets it, so the printed
@@ -448,11 +454,19 @@ function main() {
       console.log(`${MARK.ok} test     passed`);
     } else if (step.type === 'skip-test') {
       console.log(`${MARK.warn} test     skipped (--no-tests)`);
+    } else if (step.type === 'build') {
+      console.log(`${MARK.info} build    bundling dist/ (0 runtime deps)…`);
+      const b = spawnSync('npm', ['run', 'build'], { cwd: PACKAGE_ROOT, stdio: 'inherit', shell: NPM_NEEDS_SHELL });
+      if (b.status !== 0) {
+        console.error(c.red('bundle failed — aborting before publish.'));
+        process.exit(1);
+      }
     } else if (step.type === 'plan') {
       console.log(`\n${c.bold('PLAN')} — nothing published yet.`);
       console.log(`  version : ${plan.version}`);
       console.log(`  dist-tag: ${s.distTag}`);
       console.log(`  registry: ${s.registry || '(default)'}`);
+      console.log(`  payload : ${c.dim('dist/ only — bundled, 0 runtime dependencies')}`);
       console.log(`  command : ${c.cyan(`npm ${step.args.join(' ')}`)}  ${c.dim('(cwd: installer-cli)')}`);
       console.log(`\nConfirm, then re-run with ${c.bold('--yes')} to publish.`);
       process.exit(0);

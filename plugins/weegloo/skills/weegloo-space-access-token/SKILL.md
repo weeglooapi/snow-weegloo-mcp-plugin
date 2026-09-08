@@ -74,11 +74,21 @@ Scope the single SAT's role to exactly the union the client needs — e.g. `cont
 
 ---
 
+## Restricting where the token may be used (`allowedReferrers`)
+
+A SpaceAccessToken may also carry **`allowedReferrers`**. **Do not set it unless the user explicitly asks**; matching is on the **`Referer`** header, so a server-side token — the common case here — must leave it empty or every call is refused.
+
+The cost of setting it, and the rule that an update replaces the whole list: **`weegloo-delivery-access-token`** → *Restricting where the token may be used*.
+
+---
+
 ## Lifecycle & authority (operational)
 
 - **Authority = the bound `SpaceRole`.** What the token can do is decided entirely by the role bound at create time — to reason about a token's power, look at its role. The token resource does **not** echo a `role` field back, so record which role you bound.
-- **`name` and `role` are immutable; only `description` is updatable.** There is no in-place role change or secret regeneration — to change the role or rotate the secret, **delete and recreate**.
+- **`name` and `role` are immutable; `description` and `allowedReferrers` are updatable.** There is no in-place role change or secret regeneration — to change the role or rotate the secret, **delete and recreate**.
 - **`cma_DeleteSpaceAccessToken` fully revokes it** (server-side auth cache included). Deletion is the correct, complete revoke; there is no separate "disable".
+
+Updating a token is a **full replacement** of the updatable field set (`description` and `allowedReferrers`) — omitting either drops it; a partial JSON-Patch path also exists for app code — see **`weegloo-cma-json-patch`**. Request/response shapes: **`weegloo-api-endpoints`** → CMA OpenAPI (**`CreateSpaceAccessToken`**).
 
 ---
 
@@ -97,22 +107,6 @@ Scope the single SAT's role to exactly the union the client needs — e.g. `cont
 3. Copy that role's **`sys.id`** from the response → **`cma_CreateSpaceAccessToken`** with `role.sys.id` set to **only** that id.
 4. Capture **`sys.accessToken`** from the response (the `SPCAT…` secret). It is a live credential, readable again on GET — handle it per where it runs (e.g. a secret manager for a backend). Rotate by delete+recreate. **If you embed it in a public client, the bound role is the only thing limiting whoever holds it — keep that role minimal.**
 5. If step 3 fails with **`WGL422001`** → rule 4 (no escalation). If it fails with **`WGL429*`** → rule 7 (plan limit).
-
-## MCP tools (typical)
-
-| Step | MCP tool |
-|------|----------|
-| List roles (to pick / show `sys.id`) | `cma_GetListSpaceRoles` |
-| Create least-privilege role | `cma_CreateSpaceRole` |
-| Create token | `cma_CreateSpaceAccessToken` |
-| List tokens | `cma_GetListSpaceAccessTokens` |
-| Get one token | `cma_GetOneSpaceAccessToken` |
-| Update description | `cma_UpdateOneSpaceAccessToken` |
-| Delete (full revoke) | `cma_DeleteSpaceAccessToken` |
-
-Update is **full replacement** of the updatable field set (description only); a partial JSON-Patch path also exists for app code — see **`weegloo-cma-json-patch`**. Schema: **`weegloo-api-endpoints`** → CMA OpenAPI (**`CreateSpaceAccessToken`**).
-
----
 
 ## Related
 
