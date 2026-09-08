@@ -4,17 +4,18 @@
   "description": "CLI to set up the Weegloo MCP plugin for Cursor, Claude Code, Codex, Antigravity, and Android Studio (interactive or non-interactive)",
   "type": "module",
   "bin": {
-    "weegloo": "bin.js"
+    "weegloo": "dist/bin.js"
   },
   "scripts": {
+    "build": "node scripts/bundle.mjs",
+    "prepack": "node scripts/bundle.mjs",
     "test": "node --test",
     "preflight": "node scripts/release.mjs preflight",
     "release": "node scripts/release.mjs release"
   },
   "pluginRef": "latest",
   "files": [
-    "bin.js",
-    "src"
+    "dist"
   ],
   "engines": {
     "node": ">=18"
@@ -41,12 +42,13 @@
     "url": "https://github.com/weeglooapi/snow-weegloo-mcp-plugin.git",
     "directory": "installer-cli"
   },
-  "dependencies": {
-    "@inquirer/prompts": "^7.10.1",
-    "chalk": "^5.6.2",
-    "ora": "^8.2.0"
-  },
   "publishConfig": {
     "registry": "https://artifactory.navercorp.com/artifactory/api/npm/npm-local/"
+  },
+  "devDependencies": {
+    "@inquirer/prompts": "^7.10.1",
+    "chalk": "^5.6.2",
+    "esbuild": "^0.28.2",
+    "ora": "^8.2.0"
   }
 }

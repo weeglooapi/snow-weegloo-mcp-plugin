@@ -102,17 +102,17 @@ test('planRelease: unknown --bump keyword → bad-bump, exit 1', () => {
   assert.deepEqual(p.steps, []);
 });
 
-test('planRelease: NEEDS_BUMP + --bump, no --yes → bump→test→plan (dry run, no publish)', () => {
+test('planRelease: NEEDS_BUMP + --bump, no --yes → bump→test→build→plan (dry run, no publish)', () => {
   const p = planRelease({ verdict: 'NEEDS_BUMP', current: '1.5.5', distTag: 'latest', opts: { bump: 'patch' } });
-  assert.deepEqual(flow(p), ['bump', 'test', 'plan']);
+  assert.deepEqual(flow(p), ['bump', 'test', 'build', 'plan']);
   assert.equal(p.version, '1.5.6');
   assert.equal(p.reason, 'plan');
   assert.ok(!flow(p).includes('publish'));
 });
 
-test('planRelease: NEEDS_BUMP + --bump + --yes → bump→test→publish, resolved version', () => {
+test('planRelease: NEEDS_BUMP + --bump + --yes → bump→test→build→publish, resolved version', () => {
   const p = planRelease({ verdict: 'NEEDS_BUMP', current: '1.5.5', distTag: 'latest', opts: { bump: 'minor', yes: true } });
-  assert.deepEqual(flow(p), ['bump', 'test', 'publish']);
+  assert.deepEqual(flow(p), ['bump', 'test', 'build', 'publish']);
   assert.equal(p.version, '1.6.0');
   assert.equal(p.reason, 'publish');
 });
@@ -123,15 +123,33 @@ test('planRelease: explicit x.y.z bump is used verbatim', () => {
   assert.equal(p.steps.find((s) => s.type === 'bump').to, '2.4.1');
 });
 
-test('planRelease: READY without bump → test→publish at current version', () => {
+test('planRelease: READY without bump → test→build→publish at current version', () => {
   const p = planRelease({ verdict: 'READY', current: '1.6.0', distTag: 'latest', opts: { yes: true } });
-  assert.deepEqual(flow(p), ['test', 'publish']);
+  assert.deepEqual(flow(p), ['test', 'build', 'publish']);
   assert.equal(p.version, '1.6.0'); // no bump step
 });
 
 test('planRelease: --no-tests replaces the test step with skip-test', () => {
   const p = planRelease({ verdict: 'READY', current: '1.6.0', distTag: 'latest', opts: { yes: true, tests: false } });
-  assert.deepEqual(flow(p), ['skip-test', 'publish']);
+  assert.deepEqual(flow(p), ['skip-test', 'build', 'publish']);
+});
+
+// The published tarball is `dist/` only, so a publish that skipped the bundle would ship an
+// EMPTY package — and a bundle built after the publish gate would ship the previous release's
+// code. Both are silent, so the ordering is asserted rather than assumed.
+test('planRelease: build always precedes publish/plan, in every flow that reaches them', () => {
+  const cases = [
+    { verdict: 'READY', current: '1.6.0', distTag: 'latest', opts: { yes: true } },
+    { verdict: 'READY', current: '1.6.0', distTag: 'latest', opts: {} },
+    { verdict: 'NEEDS_BUMP', current: '1.5.5', distTag: 'latest', opts: { bump: 'patch', yes: true } },
+    { verdict: 'READY', current: '1.6.0', distTag: 'latest', opts: { yes: true, tests: false } },
+  ];
+  for (const args of cases) {
+    const f = flow(planRelease(args));
+    const terminal = f.findIndex((t) => t === 'publish' || t === 'plan');
+    assert.ok(terminal > -1, `no terminal step in ${f.join('→')}`);
+    assert.ok(f.indexOf('build') > -1 && f.indexOf('build') < terminal, `build not before terminal in ${f.join('→')}`);
+  }
 });
 
 test('planRelease: publish command carries the dist-tag (default and override)', () => {

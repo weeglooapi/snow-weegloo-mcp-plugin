@@ -1,9 +1,9 @@
-import path from 'path';
 import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
+// Resolved relative to THIS module, which sits one level under the package root in both
+// layouts the CLI runs in — `src/github.js` in the repo, and the bundled `dist/bin.js` in
+// the published package. Keep it that way: a deeper output dir breaks `pluginRef` at runtime.
 const pkg = require('../package.json');
 
 // Default plugin repo; override with WEEGLOO_REPO=owner/name to point the installer at a
